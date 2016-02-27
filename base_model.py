@@ -5,7 +5,6 @@ import tensorflow as tf
 import progressbar as pb
 
 from read_data import DataSet
-from utils import pad
 
 
 class BaseModel(object):
@@ -39,14 +38,7 @@ class BaseModel(object):
         return sess.run([self.opt_op, self.merged_summary, self.global_step], feed_dict=feed_dict)
 
     def test_batch(self, sess, batch):
-        params = self.params
-        batch_size = params.batch_size
-
         actual_batch_size = len(batch[0])
-        diff = batch_size - actual_batch_size
-        if diff > 0:
-            batch = [pad(each, diff) for each in batch]
-
         feed_dict = self._get_feed_dict(batch)
         correct_vec, total_loss, summary_str, global_step = \
             sess.run([self.correct_vec, self.total_loss, self.merged_summary, self.global_step], feed_dict=feed_dict)
@@ -91,6 +83,7 @@ class BaseModel(object):
         params = self.params
         num_batches = params.val_num_batches if is_val else params.test_num_batches
         num_corrects, total = 0, 0
+        loss, global_step = 0, 0
         string = "%s:N=%d|" % (eval_data_set.name, eval_data_set.batch_size * num_batches)
         pbar = pb.ProgressBar(widgets=[string, pb.Percentage(), pb.Bar(), pb.ETA()], maxval=num_batches)
         losses = []
