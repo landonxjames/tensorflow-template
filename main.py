@@ -16,7 +16,7 @@ flags.DEFINE_string("val_data_dir", 'data/val', "Val data directory [data/val]")
 flags.DEFINE_string("test_data_dir", 'data/eval', "Test data directory [data/eval]")
 
 # Training parameters
-flags.DEFINE_integer("batch_size", 100, "Batch size for the network [32]")
+flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
 flags.DEFINE_float("init_std", 0.1, "Initial weight std [0.1]")
 flags.DEFINE_integer("num_epochs", 100, "Total number of epochs for training [100]")
@@ -33,6 +33,12 @@ flags.DEFINE_integer("save_period", 10, "Save period [10]")
 # Debugging
 flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
 
+# App-specific training parameters
+# TODO : Any other parameters
+
+# App-specific options
+# TODO : Any other options
+
 FLAGS = flags.FLAGS
 
 
@@ -48,20 +54,20 @@ def main(_):
     if not os.path.exists(FLAGS.save_dir):
         os.mkdir(FLAGS.save_dir)
 
+    # For quick draft build (deubgging).
     if FLAGS.draft:
-        # For quick build (deubgging).
-        # Add any other parameter that requires a lot of computations
         FLAGS.train_num_batches = 1
         FLAGS.val_num_batches = 1
         FLAGS.test_num_batches = 1
         FLAGS.num_epochs = 1
         FLAGS.eval_period = 1
         FLAGS.save_period = 1
+        # TODO : Add any other parameter that induces a lot of computations
 
     pprint(FLAGS.__flags)
 
     graph = tf.Graph()
-    model = BaseModel(graph, FLAGS)
+    model = BaseModel(graph, FLAGS)  # TODO : your model should inherit BaseModel and instantiated here instead
     with tf.Session(graph=graph) as sess:
         sess.run(tf.initialize_all_variables())
         if FLAGS.train:

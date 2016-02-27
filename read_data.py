@@ -40,8 +40,8 @@ class DataSet(object):
 
 def read_data(params, data_dir, name):
     batch_size = params.batch_size
-    data = []  # override!
-    idxs = []  # override!
+    data = []  # TODO : override!
+    idxs = []  # TODO : override!
     include_leftover = not params.train
     data_set = DataSet(name, batch_size, data, idxs, include_leftover=include_leftover)
     return data_set

@@ -27,9 +27,11 @@ class BaseModel(object):
             self.saver = tf.train.Saver()
 
     def _build_tower(self):
+        # TODO : Implement this! Either here or by creating a child class.
         raise Exception("Implement this!")
 
     def _get_feed_dict(self, batch):
+        # TODO : Implement this!
         raise Exception("Implement this!")
 
     def train_batch(self, sess, learning_rate, batch):
