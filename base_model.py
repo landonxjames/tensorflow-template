@@ -83,7 +83,6 @@ class BaseModel(object):
         params = self.params
         num_batches = params.val_num_batches if is_val else params.test_num_batches
         num_corrects, total = 0, 0
-        loss, global_step = 0, 0
         string = "%s:N=%d|" % (eval_data_set.name, eval_data_set.batch_size * num_batches)
         pbar = pb.ProgressBar(widgets=[string, pb.Percentage(), pb.Bar(), pb.ETA()], maxval=num_batches)
         losses = []
