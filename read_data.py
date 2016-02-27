@@ -2,7 +2,7 @@ import numpy as np
 
 
 class DataSet(object):
-    def __init__(self, batch_size, data, idxs, include_leftover=False, name=""):
+    def __init__(self, name, batch_size, data, idxs, include_leftover=False):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
@@ -15,7 +15,7 @@ class DataSet(object):
         self.reset()
 
     def get_next_labeled_batch(self):
-        assert self.has_next_batch(), "End of data."
+        assert self.has_next_batch(), "End of data, reset required."
         from_, to = self.idx_in_epoch, self.idx_in_epoch + self.batch_size
         if self.include_leftover and to > self.num_examples:
             to = self.num_examples
@@ -38,11 +38,10 @@ class DataSet(object):
         np.random.shuffle(self.idxs)
 
 
-def read_data(params, data_dir):
+def read_data(params, data_dir, name):
     batch_size = params.batch_size
     data = []  # override!
     idxs = []  # override!
     include_leftover = not params.train
-    name = "train" if params.train else "eval"
-    data_set = DataSet(batch_size, data, idxs, include_leftover=include_leftover, name=name)
+    data_set = DataSet(name, batch_size, data, idxs, include_leftover=include_leftover)
     return data_set

@@ -65,7 +65,7 @@ class BaseModel(object):
             pbar.finish()
             train_data_set.complete_epoch()
 
-            if val_data_set and (epoch_idx + 1) % params.eval_period == 0:
+            if val_data_set and (epoch_idx + 1) % params.val_period == 0:
                 self.eval(sess, train_data_set, is_val=True)
                 self.eval(sess, val_data_set, is_val=True)
 

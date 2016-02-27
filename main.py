@@ -23,10 +23,11 @@ flags.DEFINE_integer("num_epochs", 100, "Total number of epochs for training [10
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
+flags.DEFINE_integer("val_num_batches", 10, "Val num batches [10]")
 flags.DEFINE_boolean("load", False, "Load from saved model? [False]")
 flags.DEFINE_boolean("progress", True, "Show progress? [True]")
 flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
-flags.DEFINE_integer("eval_period", 5, "Val data eval period (for display purpose only) [5]")
+flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
 
 # Debugging
@@ -36,22 +37,23 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-    train_ds = read_data(FLAGS, FLAGS.train_data_dir)
-    val_ds = read_data(FLAGS, FLAGS.val_data_dir)
-    test_ds = read_data(FLAGS, FLAGS.test_data_dir)
+    train_ds = read_data('train', FLAGS, FLAGS.train_data_dir)
+    val_ds = read_data('val', FLAGS, FLAGS.val_data_dir)
+    test_ds = read_data('test', FLAGS, FLAGS.test_data_dir)
 
     FLAGS.train_num_batches = train_ds.num_batches
-    FLAGS.val_num_batches = val_ds.num_batches
+    FLAGS.val_num_batches = FLAGS.val_num_batches
     FLAGS.test_num_batches = test_ds.num_batches
 
     if not os.path.exists(FLAGS.save_dir):
         os.mkdir(FLAGS.save_dir)
 
     if FLAGS.draft:
+        # For quick build (deubgging).
+        # Add any other parameter that requires a lot of computations
         FLAGS.train_num_batches = 1
         FLAGS.val_num_batches = 1
         FLAGS.test_num_batches = 1
-        FLAGS.num_layers = 1
         FLAGS.num_epochs = 1
         FLAGS.eval_period = 1
         FLAGS.save_period = 1
