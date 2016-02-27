@@ -5,6 +5,7 @@ import tensorflow as tf
 import progressbar as pb
 
 from read_data import DataSet
+from utils import pad
 
 
 class BaseModel(object):
@@ -18,27 +19,40 @@ class BaseModel(object):
             print("building %s tower ..." % self.name)
             self.global_step = tf.get_variable('global_step', shape=[],
                                                initializer=tf.constant_initializer(0), trainable=False)
+            self.learning_rate = tf.placeholder('float32', name='lr')
+            self.opt_op = None
+            self.correct_vec = None
+            self.total_loss = None
+            self.merged_summary = None
             self._build_tower()
             self.saver = tf.train.Saver()
 
     def _build_tower(self):
-        pass
+        raise Exception("Implement this!")
 
-    def save(self, sess):
-        print("saving model ...")
-        save_path = os.path.join(self.save_dir, self.name)
-        self.saver.save(sess, save_path, self.global_step)
-
-    def load(self, sess):
-        print("loading model ...")
-        checkpoint = tf.train.get_checkpoint_state(self.save_dir)
-        self.saver.restore(sess, checkpoint.model_checkpoint_path)
+    def _get_feed_dict(self, batch):
+        raise Exception("Implement this!")
 
     def train_batch(self, sess, learning_rate, batch):
-        raise Exception("Implement this function!")
+        feed_dict = self._get_feed_dict(batch)
+        feed_dict[self.learning_rate] = learning_rate
+        return sess.run([self.opt_op, self.merged_summary, self.global_step], feed_dict=feed_dict)
 
     def test_batch(self, sess, batch):
-        raise Exception("Implement this function!")
+        params = self.params
+        batch_size = params.batch_size
+
+        actual_batch_size = len(batch[0])
+        diff = batch_size - actual_batch_size
+        if diff > 0:
+            batch = [pad(each, diff) for each in batch]
+
+        feed_dict = self._get_feed_dict(batch)
+        correct_vec, total_loss, summary_str, global_step = \
+            sess.run([self.correct_vec, self.total_loss, self.merged_summary, self.global_step], feed_dict=feed_dict)
+        num_corrects = np.sum(correct_vec[:actual_batch_size])
+
+        return num_corrects, total_loss, summary_str, global_step
 
     def train(self, sess, writer, train_data_set, val_data_set):
         assert isinstance(train_data_set, DataSet)
@@ -94,3 +108,14 @@ class BaseModel(object):
 
         print("at %d: acc = %.2f%% = %d / %d, loss = %.4f" %
               (global_step, 100 * float(num_corrects)/total, num_corrects, total, loss))
+
+    def save(self, sess):
+        print("saving model ...")
+        save_path = os.path.join(self.save_dir, self.name)
+        self.saver.save(sess, save_path, self.global_step)
+
+    def load(self, sess):
+        print("loading model ...")
+        checkpoint = tf.train.get_checkpoint_state(self.save_dir)
+        self.saver.restore(sess, checkpoint.model_checkpoint_path)
+
