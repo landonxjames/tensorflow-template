@@ -6,7 +6,7 @@ import h5py
 import numpy as np
 import sys
 
-from configs.get_config import Config
+from config.get_config import Config
 
 
 class DataSet(object):
@@ -57,16 +57,22 @@ class DataSet(object):
 def read_data(params, mode):
     print("loading {} data ... ".format(mode))
     data_dir = params.data_dir
+    batch_size = params.batch_size
 
     fold_path = params.fold_path
     fold = json.load(open(fold_path, 'r'))
+
+    # TODO : create data, idx2id, and idxs. See below for an example
+    data = []
+    idx2id = []
+    idxs = []
+    """
     if mode in ['train', 'test']:
         cur_image_ids = fold[mode]
     elif mode == 'val':
         cur_image_ids = fold['test']
     else:
         raise Exception()
-
     sents_path = os.path.join(data_dir, "sents.json")
     facts_path = os.path.join(data_dir, "facts.json")
     answers_path = os.path.join(data_dir, "answers.json")
@@ -80,7 +86,6 @@ def read_data(params, mode):
     all_image_ids = json.load(open(image_ids_path, 'r'))
     image_id2idx = {id_: idx for idx, id_ in enumerate(all_image_ids)}
 
-    batch_size = params.batch_size
     sentss, answers, factss, images = [], [], [], []
     idx = 0
     idx2id = []
@@ -99,6 +104,7 @@ def read_data(params, mode):
 
     data = [sentss, factss, images, answers]
     idxs = np.arange(len(answers))
+    """
     data_set = DataSet(mode, batch_size, data, idxs, idx2id)
     print("done")
     return data_set

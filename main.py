@@ -6,16 +6,16 @@ from pprint import pprint
 import h5py
 import tensorflow as tf
 
-from configs.get_config import get_config_from_file, get_config
-from models.m05 import Tower, Runner
-from read_data.r05 import read_data
+from config.get_config import get_config_from_file, get_config
+from base_model import BaseTower, BaseRunner
+from read_data import read_data
 
 flags = tf.app.flags
 
 # File directories
-flags.DEFINE_string("model_name", "m05", "Model name. This will be used for save, log, and eval names. [m05]")
-flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
-flags.DEFINE_string("fold_path", "data/s3/folds/fold23.json", "fold json path [data/s3/folds/fold23.json]")
+flags.DEFINE_string("model_name", "mymodel", "Model name. This will be used for save, log, and eval names. [mymodel]")
+flags.DEFINE_string("data_dir", "data/mydata", "Data directory [data/mydata]")
+flags.DEFINE_string("fold_path", "data/mydata/folds/fold00.json", "fold json path [data/mydata/folds/fold00.json]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for each tower. [100]")
@@ -43,19 +43,6 @@ flags.DEFINE_string("config_ext", ".json", "Config file extension: .json | .tsv 
 
 # Debugging
 flags.DEFINE_boolean("draft", False, "Draft? (quick initialize) [False]")
-
-# App-specific training parameters
-# TODO : Any other parameters
-flags.DEFINE_integer("hidden_size", 50, "Hidden size [50]")
-flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
-flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [2]")
-flags.DEFINE_integer("emb_num_layers", 0, "Number of embedding layers [0]")
-flags.DEFINE_float("keep_prob", 1.0, "Keep probability of dropout [1.0]")
-flags.DEFINE_string("sim_func", 'dot', "Similarity function: man_sim | dot [dot]")
-flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [basic]")
-flags.DEFINE_float("forget_bias", 2.5, "LSTM forget bias for basic cell [2.5]")
-flags.DEFINE_float("cell_clip", 40, "LSTM cell clipping for regular cell [40]")
-flags.DEFINE_float("rand_y", 1.0, "Rand y. [1.0]")
 
 # App-specific options
 # TODO : Any other options
@@ -115,19 +102,15 @@ def load_meta_data(config):
     meta_data_path = os.path.join(config.data_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, "r"))
 
-    # Other parameters
-    config.max_sent_size = meta_data['max_sent_size']
-    config.max_fact_size = meta_data['max_fact_size']
-    config.max_num_facts = meta_data['max_num_facts']
-    config.num_choices = meta_data['num_choices']
-    config.vocab_size = meta_data['vocab_size']
-    config.word_size = meta_data['word_size']
+    # TODO: set other parameters, e.g.
+    # config.max_sent_size = meta_data['max_sent_size']
 
 
 def main(_):
     if FLAGS.config == "None":
         config = get_config(FLAGS.__flags, {})
     else:
+        # TODO : create config file (.json)
         config_path = os.path.join("configs", "%s%s" % (FLAGS.model_name, FLAGS.config_ext))
         config = get_config_from_file(FLAGS.__flags, config_path, FLAGS.config)
 
@@ -153,17 +136,18 @@ def main(_):
         config.val_period = 1
         config.save_period = 1
         # TODO : Add any other parameter that induces a lot of computations
-        config.num_layers = 1
-        config.rnn_num_layers = 1
 
     pprint(config.__dict__)
 
-    eval_tensor_names = ['yp', 'p']
+    # TODO : specify eval tensor names to save in evals folder
+    eval_tensor_names = []
 
     graph = tf.Graph()
-    towers = [Tower(config) for _ in range(config.num_devices)]
+    # TODO : initialize BaseTower-subclassed objects
+    towers = [BaseTower(config) for _ in range(config.num_devices)]
     sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True))
-    runner = Runner(config, sess, towers)
+    # TODO : initialize BaseRunner-subclassed object
+    runner = BaseRunner(config, sess, towers)
     with graph.as_default(), tf.device("/cpu:0"):
         runner.initialize()
         if config.train:
