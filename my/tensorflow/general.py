@@ -1,7 +1,9 @@
 import tensorflow as tf
+from functools import reduce
+from operator import mul
 
 
-def _variable_on_cpu(name, shape, initializer):
+def variable_on_cpu(name, shape, initializer):
     """Helper to create a Variable stored on CPU memory.
 
     Args:
@@ -17,7 +19,7 @@ def _variable_on_cpu(name, shape, initializer):
     return var
 
 
-def _variable_with_weight_decay(name, shape, stddev, wd):
+def variable_with_weight_decay(name, shape, stddev, wd):
     """Helper to create an initialized Variable with weight decay.
 
     Note that the Variable is initialized with a truncated normal distribution.
@@ -33,7 +35,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
     Returns:
       Variable Tensor
     """
-    var = _variable_on_cpu(name, shape,
+    var = variable_on_cpu(name, shape,
                            tf.truncated_normal_initializer(stddev=stddev))
     if wd:
         weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
@@ -78,3 +80,14 @@ def average_gradients(tower_grads):
         grad_and_var = (grad, v)
         average_grads.append(grad_and_var)
     return average_grads
+
+
+def to2d(shape):
+    """
+    [a, b, c, ... , z] -> [a*b*...*y, z]
+    :param shape:
+    :return:
+    """
+    return [reduce(mul, shape[:-1], 1), shape[-1]]
+
+

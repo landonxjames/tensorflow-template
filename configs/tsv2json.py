@@ -1,9 +1,8 @@
 import argparse
 import csv
-import json
 from collections import OrderedDict
 
-from utils import json_pretty_dump
+from my.utils import json_pretty_dump
 
 
 def get_args():

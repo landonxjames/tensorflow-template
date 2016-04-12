@@ -1,11 +1,7 @@
-import csv
 import json
 import os
-from pprint import pprint
 
-import h5py
 import numpy as np
-import sys
 
 from configs.get_config import Config
 
@@ -61,6 +57,11 @@ def read_data(params, mode):
 
     print("loading {} data ... ".format(mode))
 
+    data = None
+    idxs = None
+    idx2id_dict = None
+    # TODO : these need to be defined. See examples below.
+    """
     mode2ids_path = os.path.join(data_dir, "mode2ids.json")
     mode2ids_dict = json.load(open(mode2ids_path, 'r'))
     idx2id_path = os.path.join(data_dir, "idx2id.json")
@@ -75,6 +76,7 @@ def read_data(params, mode):
     sents = json.load(open(sents_path, 'r'))
     scores = json.load(open(scores_path, 'r'))
     data = [sents, scores]
+    """
 
     data_set = DataSet(mode, batch_size, data, idxs, idx2id_dict)
     print("done")
@@ -83,7 +85,7 @@ def read_data(params, mode):
 
 def main():
     config = Config()
-    config.data_dir = "data/sentiment"
+    config.data_dir = "data/mydata"
     config.batch_size = 100
     data_set = read_data(config, 'dev')
     print(data_set.get_num_batches(True))

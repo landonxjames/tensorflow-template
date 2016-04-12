@@ -6,8 +6,8 @@ import numpy as np
 import tensorflow as tf
 
 from my.tensorflow import average_gradients
+from my.utils import get_pbar
 from read_data import DataSet
-from utils import get_pbar
 
 
 class BaseRunner(object):
