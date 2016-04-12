@@ -52,8 +52,8 @@ class BaseRunner(object):
         correct_tensors = []
         loss_tensors = []
         for device_id, tower in enumerate(self.towers):
-            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)) as scope:
-                tower.initialize(scope)
+            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
+                tower.initialize()
                 tf.get_variable_scope().reuse_variables()
                 loss_tensor = tower.get_loss_tensor()
                 loss_tensors.append(loss_tensor)
@@ -178,17 +178,12 @@ class BaseRunner(object):
         sess = self.sess
         epoch_op = self.tensors['epoch']
         dn = data_set.get_num_batches(partial=True)
-        if is_val:
-            pn = params.val_num_batches
-            num_batches = pn if 0 <= pn <= dn else dn
-        else:
-            pn = params.test_num_batches
-            num_batches = pn if 0 <= pn <= dn else dn
+        pn = params.val_num_batches if is_val else params.test_num_batches
+        num_batches = pn if 0 <= pn <= dn else dn
         num_iters = int(np.ceil(num_batches / self.num_towers))
-        num_corrects, total = 0, 0
+        num_corrects, total, total_loss = 0, 0, 0.0
         eval_values = []
         idxs = []
-        losses = []
         N = data_set.batch_size * num_batches
         if N > data_set.num_examples:
             N = data_set.num_examples
@@ -200,16 +195,17 @@ class BaseRunner(object):
                 if data_set.has_next_batch(partial=True):
                     idxs.extend(data_set.get_batch_idxs(partial=True))
                     batches.append(data_set.get_next_labeled_batch(partial=True))
-            (cur_num_corrects, cur_loss, _, global_step), eval_value_batches = \
+            (cur_num_corrects, cur_avg_loss, _, global_step), eval_value_batches = \
                 self._eval_batches(batches, eval_tensor_names=eval_tensor_names)
             num_corrects += cur_num_corrects
-            total += sum(len(batch[0]) for batch in batches)
+            cur_num = sum(len(batch[0]) for batch in batches)
+            total += cur_num
             for eval_value_batch in eval_value_batches:
                 eval_values.append([x.tolist() for x in eval_value_batch])  # numpy.array.toList
-            losses.append(cur_loss)
+            total_loss += cur_avg_loss * cur_num
             pbar.update(iter_idx)
         pbar.finish()
-        loss = np.mean(losses)
+        loss = total_loss / total
         data_set.reset()
 
         epoch = sess.run(epoch_op)
@@ -268,9 +264,9 @@ class BaseTower(object):
         self.params = params
         self.placeholders = {}
         self.tensors = {}
-        self.default_initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
+        self.default_initializer = tf.truncated_normal_initializer(params.init_mean, params.init_std)
 
-    def initialize(self, scope):
+    def initialize(self):
         # Actual building
         # Separated so that GPU assignment can be done here.
         raise Exception("Implement this!")
@@ -282,4 +278,5 @@ class BaseTower(object):
         return self.tensors['loss']
 
     def get_feed_dict(self, batch, mode, **kwargs):
+        # TODO : MUST handle batch = None
         raise Exception("Implment this!")

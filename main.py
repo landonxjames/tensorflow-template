@@ -6,7 +6,7 @@ from pprint import pprint
 import h5py
 import tensorflow as tf
 
-from config.get_config import get_config_from_file, get_config
+from configs.get_config import get_config_from_file, get_config
 from base_model import BaseTower, BaseRunner
 from read_data import read_data
 
@@ -38,7 +38,7 @@ flags.DEFINE_string("device_type", 'cpu', "cpu | gpu [cpu]")
 flags.DEFINE_integer("num_devices", 1, "Number of devices to use. Only for multi-GPU. [1]")
 flags.DEFINE_integer("val_period", 5, "Validation period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
-flags.DEFINE_string("config", 'None', "Config name (e.g. local) to load. 'None' to use config here. [None]")
+flags.DEFINE_string("configs", 'None', "Config name (e.g. local) to load. 'None' to use configs here. [None]")
 flags.DEFINE_string("config_ext", ".json", "Config file extension: .json | .tsv [.json]")
 
 # Debugging
@@ -99,18 +99,18 @@ def mkdirs(config):
 
 
 def load_meta_data(config):
-    meta_data_path = os.path.join(config.data_dir, "meta_data.json")
-    meta_data = json.load(open(meta_data_path, "r"))
+    metadata_path = os.path.join(config.data_dir, "metadata.json")
+    metadata = json.load(open(metadata_path, "r"))
 
     # TODO: set other parameters, e.g.
-    # config.max_sent_size = meta_data['max_sent_size']
+    # configs.max_sent_size = meta_data['max_sent_size']
 
 
 def main(_):
     if FLAGS.config == "None":
         config = get_config(FLAGS.__flags, {})
     else:
-        # TODO : create config file (.json)
+        # TODO : create configs file (.json)
         config_path = os.path.join("configs", "%s%s" % (FLAGS.model_name, FLAGS.config_ext))
         config = get_config_from_file(FLAGS.__flags, config_path, FLAGS.config)
 
@@ -123,7 +123,7 @@ def main(_):
 
     if config.train:
         train_ds = read_data(config, 'train')
-        val_ds = read_data(config, 'val')
+        dev_ds = read_data(config, 'dev')
     else:
         test_ds = read_data(config, 'test')
 
@@ -153,7 +153,7 @@ def main(_):
         if config.train:
             if config.load:
                 runner.load()
-            runner.train(train_ds, val_ds, eval_tensor_names=eval_tensor_names)
+            runner.train(train_ds, dev_ds, eval_tensor_names=eval_tensor_names)
         else:
             runner.load()
             runner.eval(test_ds, eval_tensor_names=eval_tensor_names)

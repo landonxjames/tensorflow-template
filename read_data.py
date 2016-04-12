@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 from pprint import pprint
@@ -6,7 +7,7 @@ import h5py
 import numpy as np
 import sys
 
-from config.get_config import Config
+from configs.get_config import Config
 
 
 class DataSet(object):
@@ -55,62 +56,37 @@ class DataSet(object):
 
 
 def read_data(params, mode):
-    print("loading {} data ... ".format(mode))
     data_dir = params.data_dir
     batch_size = params.batch_size
 
-    fold_path = params.fold_path
-    fold = json.load(open(fold_path, 'r'))
+    print("loading {} data ... ".format(mode))
 
-    # TODO : create data, idx2id, and idxs. See below for an example
-    data = []
-    idx2id = []
-    idxs = []
-    """
-    if mode in ['train', 'test']:
-        cur_image_ids = fold[mode]
-    elif mode == 'val':
-        cur_image_ids = fold['test']
-    else:
-        raise Exception()
+    mode2ids_path = os.path.join(data_dir, "mode2ids.json")
+    mode2ids_dict = json.load(open(mode2ids_path, 'r'))
+    idx2id_path = os.path.join(data_dir, "idx2id.json")
+    idx2id_dict = json.load(open(idx2id_path, 'r'))
+    idx2id_dict = {int(idx): id_ for idx, id_ in idx2id_dict.items()}
+    id2idx_dict = {id_: int(idx) for idx, id_ in idx2id_dict.items()}
+    ids = mode2ids_dict[mode]
+    idxs = [id2idx_dict[id_] for id_ in ids]
+
     sents_path = os.path.join(data_dir, "sents.json")
-    facts_path = os.path.join(data_dir, "facts.json")
-    answers_path = os.path.join(data_dir, "answers.json")
-    images_path = os.path.join(data_dir, "images.h5")
-    image_ids_path = os.path.join(data_dir, "image_ids.json")
+    scores_path = os.path.join(data_dir, "scores.json")
+    sents = json.load(open(sents_path, 'r'))
+    scores = json.load(open(scores_path, 'r'))
+    data = [sents, scores]
 
-    sentss_dict = json.load(open(sents_path, "r"))
-    facts_dict = json.load(open(facts_path, "r"))
-    answers_dict = json.load(open(answers_path, "r"))
-    images_h5 = h5py.File(images_path, 'r')
-    all_image_ids = json.load(open(image_ids_path, 'r'))
-    image_id2idx = {id_: idx for idx, id_ in enumerate(all_image_ids)}
-
-    sentss, answers, factss, images = [], [], [], []
-    idx = 0
-    idx2id = []
-    for image_id in cur_image_ids:
-        if image_id not in sentss_dict or image_id not in facts_dict:
-            continue
-        facts = facts_dict[image_id]
-        image = images_h5['data'][image_id2idx[image_id]]
-        for sent_id, (sents, answer) in enumerate(zip(sentss_dict[image_id], answers_dict[image_id])):
-            sentss.append(sents)
-            answers.append(answer)
-            factss.append(facts)
-            images.append(image)
-            idx2id.append([image_id, sent_id])
-            idx += 1
-
-    data = [sentss, factss, images, answers]
-    idxs = np.arange(len(answers))
-    """
-    data_set = DataSet(mode, batch_size, data, idxs, idx2id)
+    data_set = DataSet(mode, batch_size, data, idxs, idx2id_dict)
     print("done")
     return data_set
 
 
+def main():
+    config = Config()
+    config.data_dir = "data/sentiment"
+    config.batch_size = 100
+    data_set = read_data(config, 'dev')
+    print(data_set.get_num_batches(True))
+
 if __name__ == "__main__":
-    params = Config()
-    params.batch_size = 2
-    params.train = True
+    main()
