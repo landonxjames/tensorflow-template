@@ -7,13 +7,15 @@ from configs.get_config import Config
 
 
 class DataSet(object):
-    def __init__(self, name, batch_size, data, idxs, idx2id):
+    def __init__(self, name, batch_size, data, idxs, idx2id=None):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
         self.batch_size = batch_size
         self.data = data
         self.idxs = idxs
+        if idx2id is None:
+            idx2id = {idx: idx for idx in idxs}
         self.idx2id = idx2id
         self.num_examples = len(idxs)
         self.num_full_batches = int(self.num_examples / self.batch_size)
