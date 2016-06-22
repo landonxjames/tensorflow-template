@@ -1,15 +1,15 @@
 import itertools
 import json
+import logging
 import os
 from collections import defaultdict
-import logging
 
 import numpy as np
 import tensorflow as tf
 
+from model.read_data import DataSet
 from my.tensorflow import average_gradients
 from my.utils import get_pbar
-from read_data import DataSet
 
 
 class BaseRunner(object):
