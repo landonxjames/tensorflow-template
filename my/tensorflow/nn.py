@@ -4,10 +4,10 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import variable_scope as vs
 import tensorflow as tf
 
-from my.tensorflow import to2d
+from my.tensorflow import flatten
 
 
-def linear(args, output_size, bias, bias_start=0.0, scope=None):
+def linear(args, output_size, bias, bias_start=0.0, scope=None, var_on_cpu=False, wd=0.0, squeeze=False, initializer=None):
     """Linear map: sum_i(args[i] * W[i]), where W[i] is a variable.
 
     Args:
@@ -34,7 +34,7 @@ def linear(args, output_size, bias, bias_start=0.0, scope=None):
     shapes = [a.get_shape().as_list() for a in args]
     assert len(set(tuple(shape[:-1]) for shape in shapes)) <= 1
 
-    new_shapes = [to2d(shape) for shape in shapes]
+    new_shapes = [flatten(shape, 2) for shape in shapes]
     res_shape = shapes[0][:-1] + [output_size]
     args = [tf.reshape(arg, new_shape) for arg, new_shape in zip(args, new_shapes)]
 
@@ -48,16 +48,39 @@ def linear(args, output_size, bias, bias_start=0.0, scope=None):
 
     # Now the computation.
     with vs.variable_scope(scope or "Linear"):
-        matrix = vs.get_variable("Matrix", [total_arg_size, output_size])
+        if var_on_cpu:
+            with tf.device("/cpu:0"):
+                matrix = vs.get_variable("Matrix", [total_arg_size, output_size], initializer=initializer)
+        else:
+            matrix = vs.get_variable("Matrix", [total_arg_size, output_size], initializer=initializer)
+
+        if wd:
+            weight_decay = tf.mul(tf.nn.l2_loss(matrix), wd, name='weight_loss')
+            tf.add_to_collection('losses', weight_decay)
+
         if len(args) == 1:
             res = math_ops.matmul(args[0], matrix)
         else:
             res = math_ops.matmul(array_ops.concat(1, args), matrix)
         if not bias:
+            res = tf.reshape(res, res_shape, name='out')
+            if squeeze:
+                res = tf.squeeze(res, squeeze_dims=[len(res_shape)-1])
             return res
         bias_term = vs.get_variable(
             "Bias", [output_size],
             initializer=init_ops.constant_initializer(bias_start))
-    res = res + bias_term
-    res = tf.reshape(res, res_shape)
+        res = res + bias_term
+        res = tf.reshape(res, res_shape, name='out')
+        if squeeze:
+            res = tf.squeeze(res, squeeze_dims=[len(res_shape)-1])
     return res
+
+
+def relu1(features, name=None):
+    name = name or "relu1"
+    return tf.minimum(tf.maximum(features, 0), 1, name=name)
+
+
+def dists(a, b):
+    return [a * b]

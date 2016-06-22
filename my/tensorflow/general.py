@@ -1,6 +1,11 @@
 import tensorflow as tf
 from functools import reduce
 from operator import mul
+import numpy as np
+
+VERY_BIG_NUMBER = 1e10
+VERY_POSITIVE_NUMBER = VERY_BIG_NUMBER
+VERY_NEGATIVE_NUMBER = -VERY_BIG_NUMBER
 
 
 def variable_on_cpu(name, shape, initializer):
@@ -61,9 +66,9 @@ def average_gradients(tower_grads):
         # Note that each grad_and_vars looks like the following:
         #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
         grads = []
-        for g, _ in grad_and_vars:
+        for g, var in grad_and_vars:
             # Add 0 dimension to the gradients to represent the tower.
-            assert g is not None
+            assert g is not None, var.name
             expanded_g = tf.expand_dims(g, 0)
 
             # Append on a 'tower' dimension which we will average over below.
@@ -82,12 +87,41 @@ def average_gradients(tower_grads):
     return average_grads
 
 
-def to2d(shape):
+def flatten(shape, dim=1):
     """
     [a, b, c, ... , z] -> [a*b*...*y, z]
     :param shape:
     :return:
     """
-    return [reduce(mul, shape[:-1], 1), shape[-1]]
+    assert len(shape) >= dim
+    keep = dim - 1
+    out = [reduce(mul, shape[:len(shape)-keep], 1)] + shape[len(shape)-keep:]
+    return out
 
+
+def exp_mask(val, mask, name="masked_val"):
+    """Give very negative number to unmasked elements in val.
+    For example, [-3, -2, 10], [True, True, False] -> [-3, -2, -1e10].
+    Typically, this effectively masks in exponential space (e.g. softmax)
+    Args:
+        val: values to be masked
+        mask: masking boolean tensor, same shape as tensor
+        name: name for output tensor
+
+    Returns:
+        Same shape as val, where some elements are very small (exponentially zero)
+    """
+    return tf.add(val, (1 - tf.cast(mask, 'float')) * VERY_NEGATIVE_NUMBER, name=name)
+
+
+def translate(tensor, translation):
+    shape = tensor.get_shape().as_list()
+    translation = np.array(translation, dtype='int32')
+    start = np.maximum(translation, np.zeros(translation.shape)).astype('int32')
+    stop = np.minimum(shape, shape + translation).astype('int32')
+    size = (stop - start).astype('int32')
+    left_padding = list(start.astype('int32'))
+    right_padding = list((shape - stop).astype('int32'))
+    paddings = list(zip(left_padding, right_padding))
+    return tf.pad(tf.slice(tensor, start, size), paddings, mode='CONSTANT')
 
