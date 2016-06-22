@@ -4,7 +4,7 @@ import shutil
 from pprint import pprint
 
 import tensorflow as tf
-from base_model import BaseTower, BaseRunner
+from model.base_model import BaseTower, BaseRunner
 
 from config.get_config import get_config_from_file, get_config
 from model.read_data import read_data
