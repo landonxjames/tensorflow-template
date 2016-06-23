@@ -314,6 +314,10 @@ class BaseTower(object):
         self.initializer = tf.truncated_normal_initializer(params.init_mean, params.init_std)
 
     def initialize(self):
+        self._initialize()
+        self.variables_dict['all'] = tf.trainable_variables()
+
+    def _initialize(self):
         # Actual building
         # Separated so that GPU assignment can be done here.
         # TODO : self.tensors['loss'] and self.tensors['correct'] must be defined.
@@ -329,5 +333,8 @@ class BaseTower(object):
         return self.variables_dict
 
     def get_feed_dict(self, batch, mode, **kwargs):
+        return self._get_feed_dict(batch, mode, **kwargs)
+
+    def _get_feed_dict(self, batch, mode, **kwargs):
         # TODO : MUST handle batch = None
         raise NotImplementedError()
