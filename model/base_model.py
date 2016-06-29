@@ -7,7 +7,7 @@ from collections import defaultdict
 import numpy as np
 import tensorflow as tf
 
-from model.read_data import DataSet
+from model.read_data import DataSet, NUM
 from my.tensorflow import average_gradients
 from my.utils import get_pbar
 
@@ -136,7 +136,7 @@ class BaseRunner(object):
     def _eval_batches(self, batches, eval_tensor_names=(), **eval_kwargs):
         sess = self.sess
         tensors = self.tensors
-        num_examples = sum(len(batch[0]) for batch in batches)
+        num_examples = sum(batch[NUM] for batch in batches)
         feed_dict = self._get_feed_dict(batches, 'eval', **eval_kwargs)
         ops = [tensors[name] for name in ['correct', 'loss', 'summary', 'global_step']]
         correct, loss, summary, global_step = sess.run(ops, feed_dict=feed_dict)

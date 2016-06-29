@@ -19,8 +19,8 @@ def prepro(args):
     source_dir = args.source_dir
     target_dir = args.target_dir
     # TODO : put something here
-    mode2idxs_dict = {}
-    data = {}
+    mode2idxs_dict = {'train': [0, 2], 'test': [1]}
+    data = {'X': [-1, -1, 1], 'Y': [0, 0, 1]}
     _save(mode2idxs_dict, data, target_dir)
 
 

@@ -38,12 +38,16 @@ class Tower(BaseTower):
         feed_dict = {ph['x']: x, ph['y']: y,
                      ph['is_train']: mode == 'train'}
 
+        # Batch can be empty in multi GPU parallelization
         if batch is None:
             return feed_dict
 
-        for i, xx in enumerate(x):
+        # TODO : retrieve data and store it in the numpy arrays; example shown below
+        X, Y = batch['X'], batch['Y']
+
+        for i, xx in enumerate(X):
             x[i] = xx
-        for i, yy in enumerate(y):
+        for i, yy in enumerate(Y):
             y[i] = yy
 
         return feed_dict
