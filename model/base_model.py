@@ -166,7 +166,7 @@ class BaseRunner(object):
 
         epoch_op = self.tensors['epoch']
         epoch = sess.run(epoch_op)
-        print("training %d epochs ... " % num_epochs)
+        logging.info("training %d epochs ... " % num_epochs)
         logging.info("num iters per epoch: %d" % num_iters_per_epoch)
         logging.info("starting from epoch %d." % (epoch+1))
         while epoch < num_epochs:
@@ -227,7 +227,7 @@ class BaseRunner(object):
             (cur_num_corrects, cur_avg_loss, _, global_step), eval_value_batches = \
                 self._eval_batches(batches, eval_tensor_names=eval_tensor_names, **eval_args)
             num_corrects += cur_num_corrects
-            cur_num = sum(len(batch[0]) for batch in batches)
+            cur_num = sum(batch[NUM] for batch in batches)
             total += cur_num
             for eval_value_batch in eval_value_batches:
                 eval_values.append([x.tolist() for x in eval_value_batch])  # numpy.array.toList
@@ -240,8 +240,8 @@ class BaseRunner(object):
         data_set.reset()
 
         acc = float(num_corrects) / total
-        print("%s at epoch %d: acc = %.2f%% = %d / %d, loss = %.4f" %
-              (data_set.name, epoch, 100 * acc, num_corrects, total, loss))
+        logging.info("%s at epoch %d: acc = %.2f%% = %d / %d, loss = %.4f" %
+                     (data_set.name, epoch, 100 * acc, num_corrects, total, loss))
 
         # For outputting eval json files
         if len(eval_tensor_names) > 0:
