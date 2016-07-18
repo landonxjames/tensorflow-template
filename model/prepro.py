@@ -20,32 +20,26 @@ def prepro(args):
     source_dir = args.source_dir
     target_dir = args.target_dir
     # TODO : put something here; Fake data shown
-    size = 1000
+    sizes = {'train': 700, 'dev': 100, 'test': 200}
     std = 0.1
-    Y = [0] * size + [1] * size
-    X = np.random.normal(0, std, size).tolist() + np.random.normal(1, std, size).tolist()
-    idxs = np.random.permutation(size * 2).tolist()
-    train_idxs = idxs[:int(size * 0.6)]
-    dev_idxs = idxs[int(size * 0.6):int(size * 0.7)]
-    test_idxs = idxs[int(size * 0.7):]
+    all_data = {}
+    for mode, size in sizes.items():
+        Y = [0] * size + [1] * size
+        X = np.random.normal(0, std, size).tolist() + np.random.normal(1, std, size).tolist()
+        all_data[mode] = {'X': X, 'Y': Y}
 
-    data = {'X': X, 'Y': Y}
-    mode2idxs_dict = {'train': train_idxs, 'dev': dev_idxs, 'test': test_idxs}
-    _save(mode2idxs_dict, data, target_dir)
+    for mode, each_data in all_data.items():
+        _save(target_dir, mode, each_data)
 
 
-def _save(mode2idxs_dict, data, target_dir):
+def _save(target_dir, mode, data):
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
-    mode2idxs_path = os.path.join(target_dir, "mode2idxs.json")
-    metadata_path = os.path.join(target_dir, "metadata.json")
-    data_path = os.path.join(target_dir, "data.json")
+    metadata_path = os.path.join(target_dir, "{}_metadata.json".format(mode))
+    data_path = os.path.join(target_dir, "{}_data.json".format(mode))
 
-    X, Y = data['X'], data['Y']
-    metadata = {'num_classes': len(set(Y))}
+    metadata = {'num_classes': len(set(data['Y']))}
 
-    with open(mode2idxs_path, 'w') as fh:
-        json.dump(mode2idxs_dict, fh)
     with open(metadata_path, 'w') as fh:
         json.dump(metadata, fh)
     with open(data_path, 'w') as fh:

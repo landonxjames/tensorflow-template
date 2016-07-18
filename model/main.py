@@ -105,11 +105,17 @@ def _makedirs(config, trial_idx):
 
 def _load_metadata(config):
     data_dir = config.data_dir
-    metadata_path = os.path.join(data_dir, "metadata.json")
-    metadata = json.load(open(metadata_path, "r"))
-
+    if config.train:
+        train_metadata_path = os.path.join(data_dir, "train_metadata.json")
+        train_metadata = json.load(open(train_metadata_path, "r"))
+        dev_metadata_path = os.path.join(data_dir, "dev_metadata.json")
+        dev_metadata = json.load(open(dev_metadata_path, "r"))
+        config.num_classes = train_metadata['num_classes']
+    else:
+        test_metadata_path = os.path.join(data_dir, "test_metadata.json")
+        test_metadata = json.load(open(test_metadata_path, "r"))
+        config.num_classes = test_metadata['num_classes']
     # TODO: set other parameters, e.g.
-    config.num_classes = metadata['num_classes']
 
 
 def _main(config, num_trials):

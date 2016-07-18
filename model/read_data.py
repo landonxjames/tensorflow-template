@@ -7,17 +7,19 @@ import numpy as np
 NUM = "NUM"
 
 class DataSet(object):
-    def __init__(self, name, batch_size, data, idxs, idx2id=None):
+    def __init__(self, data, batch_size, name='default', idxs=None, idx2id=None):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
         self.batch_size = batch_size
         self.data = data
+        self.num_examples = len(next(iter(data.values())))
+        if idxs is None:
+            idxs = list(range(self.num_examples))
         self.idxs = idxs
         if idx2id is None:
             idx2id = {idx: idx for idx in idxs}
         self.idx2id = idx2id
-        self.num_examples = len(idxs)
         self.num_full_batches = int(self.num_examples / self.batch_size)
         self.num_all_batches = self.num_full_batches + int(self.num_examples % self.batch_size > 0)
         self.reset()
@@ -61,10 +63,7 @@ def read_data(params, mode):
     batch_size = params.batch_size
     data_dir = params.data_dir
 
-    mode2idxs_path = os.path.join(data_dir, "mode2idxs.json")
-    data_path = os.path.join(data_dir, "data.json")
-    mode2idxs_dict = json.load(open(mode2idxs_path, 'r'))
+    data_path = os.path.join(data_dir, "{}_data.json".format(mode))
     data = json.load(open(data_path, 'r'))
-    idxs = mode2idxs_dict[mode]
-    data_set = DataSet(mode, batch_size, data, idxs)
+    data_set = DataSet(data, batch_size, name=mode)
     return data_set
