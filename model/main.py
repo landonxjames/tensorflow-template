@@ -6,9 +6,10 @@ import sys
 from pprint import pformat
 
 import tensorflow as tf
+import numpy as np
+
 from model.base_model import BaseRunner
 from model.model import Tower
-
 from config.get_config import get_config_from_file, get_config
 from model.read_data import read_data
 
@@ -34,7 +35,8 @@ flags.DEFINE_float("max_val_loss", 0.0, "Max val loss [0.0]")
 
 # Training and testing options
 # These do not directly affect result performance (they affect duration though)
-flags.DEFINE_boolean("train", True, "Train (will override without load)? Test if False [True]")
+flags.DEFINE_boolean("train", True, "Train? False if test. [True]")
+flags.DEFINE_boolean("supervise", True, "Supervise? Must be True if train=True. [True]")
 flags.DEFINE_integer("val_num_batches", 0, "Val num batches. 0 for max possible. [0]")
 flags.DEFINE_integer("train_num_batches", 0, "Train num batches. 0 for max possible [0]")
 flags.DEFINE_integer("test_num_batches", 0, "Test num batches. 0 for max possible [0]")
@@ -67,6 +69,18 @@ def _init():
     run_dir = os.path.join(FLAGS.out_dir, FLAGS.model_name, run_id)
     FLAGS.run_dir = run_dir
 
+    # Logging stuff
+    stdout_log_path = os.path.join(run_dir, "stdout.log")
+
+    """
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler(open(stdout_log_path, 'w'))
+    ch.setLevel(logging.DEBUG)
+    root.addHandler(ch)
+    """
+    logging.basicConfig(filename=stdout_log_path, filemode='a', level=logging.DEBUG)
+
     if os.path.exists(run_dir) and FLAGS.train and not FLAGS.load:
         logging.warning("removing {}".format(run_dir))
         shutil.rmtree(run_dir)
@@ -74,14 +88,6 @@ def _init():
     if not os.path.exists(run_dir):
         os.makedirs(run_dir)
 
-    # Logging stuff
-    stdout_log_path = os.path.join(run_dir, "stdout.log")
-
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler(open(stdout_log_path, 'w'))
-    ch.setLevel(logging.DEBUG)
-    root.addHandler(ch)
 
 
 def _makedirs(config, trial_idx):
@@ -123,9 +129,10 @@ def _main(config, num_trials):
 
     # Load data
     if config.train:
-        comb_train_ds = read_data(config, 'train')
-        comb_dev_ds = read_data(config, 'dev')
-    comb_test_ds = read_data(config, 'test')
+        train_ds = read_data(config, 'train')
+        dev_ds = read_data(config, 'dev')
+    else:
+        test_ds = read_data(config, 'test')
 
     # For quick draft initialize (deubgging).
     if config.draft:
@@ -137,6 +144,14 @@ def _main(config, num_trials):
         config.save_period = 1
         # TODO : Add any other parameter that induces a lot of computations
 
+    # Sanity check
+    if config.val_period > config.num_epochs:
+        config.val_period = config.num_epochs
+        logging.warning("val_period is bigger than num_epochs. Adjusting val_period <- num_epochs.")
+    if config.save_period > config.num_epochs:
+        config.save_period = config.num_epochs
+        logging.warning("save_period is bigger than num_epochs. Adjusting save_period <- num_epochs.")
+
     logging.info(pformat(config.__dict__, indent=2))
 
     # TODO : specify eval tensor names to save in evals folder
@@ -147,11 +162,11 @@ def _main(config, num_trials):
         return min(enumerate(_val_losses), key=lambda x: x[1])[0]
 
     val_losses = []
+    val_accs = []
     test_accs = []
     for trial_idx in range(1, num_trials+1):
-        if config.train:
-            logging.info("-" * 80)
-            logging.info("Trial {}".format(trial_idx))
+        logging.info("-" * 80)
+        logging.info("Trial {}".format(trial_idx))
         _makedirs(config, trial_idx)
         graph = tf.Graph()
         # TODO : initialize BaseTower-subclassed objects
@@ -164,30 +179,27 @@ def _main(config, num_trials):
             if config.train:
                 if config.load:
                     runner.load()
-                val_loss, val_acc = runner.train(comb_train_ds, config.num_epochs, val_data_set=comb_dev_ds,
+                val_loss, val_acc = runner.train(train_ds, config.num_epochs, val_data_set=dev_ds,
                                                  num_batches=config.train_num_batches,
                                                  val_num_batches=config.val_num_batches, eval_ph_names=eval_ph_names)
+                val_accs.append(val_acc)
                 val_losses.append(val_loss)
             else:
                 runner.load()
-            test_loss, test_acc = runner.eval(comb_test_ds, eval_tensor_names=eval_tensor_names,
-                                   num_batches=config.test_num_batches, eval_ph_names=eval_ph_names)
-            test_accs.append(test_acc)
+                test_loss, test_acc = runner.eval(test_ds, eval_tensor_names=eval_tensor_names,
+                                                  num_batches=config.test_num_batches, eval_ph_names=eval_ph_names)
+                test_accs.append(test_acc)
 
         if config.train:
             best_trial_idx = get_best_trial_idx(val_losses)
             logging.info("-" * 80)
             logging.info("Num trials: {}".format(trial_idx))
             logging.info("Min val loss: {:.4f}".format(min(val_losses)))
-            logging.info("Test acc at min val acc: {:.2f}%".format(100 * test_accs[best_trial_idx]))
             logging.info("Trial idx: {}".format(best_trial_idx+1))
+        else:
+            logging.info("Test variances: {}".format(np.std(test_accs)))
 
-        # Cheating, but for speed
-        if test_acc == 1.0:
-            break
-
-    best_trial_idx = get_best_trial_idx(val_losses)
-    summary = "{:.2f}% at trial {}".format(test_accs[best_trial_idx] * 100, best_trial_idx)
+    summary = ""
     return summary
 
 

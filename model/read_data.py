@@ -6,8 +6,9 @@ import numpy as np
 
 NUM = "NUM"
 
+
 class DataSet(object):
-    def __init__(self, data, batch_size, name='default', idxs=None, idx2id=None):
+    def __init__(self, data, batch_size, name='default', idxs=None, idx2id=None, shuffle=True):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
@@ -22,6 +23,7 @@ class DataSet(object):
         self.idx2id = idx2id
         self.num_full_batches = int(self.num_examples / self.batch_size)
         self.num_all_batches = self.num_full_batches + int(self.num_examples % self.batch_size > 0)
+        self.shuffle = shuffle  # this is for debugging purpose; set it False to disable shuffling after reset
         self.reset()
 
     def get_num_batches(self, partial=False):
@@ -35,7 +37,7 @@ class DataSet(object):
         cur_idxs = self.idxs[from_:to]
         return cur_idxs
 
-    def get_next_labeled_batch(self, partial=False):
+    def get_next_batch(self, partial=False):
         cur_idxs = self.get_batch_idxs(partial=partial)
         batch = {key: [each[i] for i in cur_idxs] for key, each in self.data.items()}
         assert NUM not in batch, "Variable name '{}' is reserved.".format(NUM)
@@ -55,7 +57,8 @@ class DataSet(object):
 
     def reset(self):
         self.idx_in_epoch = 0
-        np.random.shuffle(self.idxs)
+        if self.shuffle:
+            np.random.shuffle(self.idxs)
 
 
 def read_data(params, mode):

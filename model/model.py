@@ -6,7 +6,7 @@ from my.tensorflow.nn import linear
 
 
 class Tower(BaseTower):
-    def _initialize(self):
+    def _initialize_forward(self):
         params = self.params
         ph = self.placeholders
         tensors = self.tensors
@@ -16,20 +16,33 @@ class Tower(BaseTower):
         # TODO : define placeholders and put them in ph
         num_classes = params.num_classes
         x = tf.placeholder("float", shape=[N, 1], name='x')
-        y = tf.placeholder("int32", shape=[N], name='y')
         ph['x'] = x
-        ph['y'] = y
         ph['is_train'] = is_train
 
         # TODO : put your codes here
         with tf.variable_scope("main"):
             logits = linear([x], num_classes, True, scope='logits')
+            tensors['logits'] = logits
+
+    def _initialize_supervision(self):
+        params = self.params
+        tensors = self.tensors
+        ph = self.placeholders
+        N = params.batch_size
+        y = tf.placeholder("int32", shape=[N], name='y')
+        y_mask = tf.placeholder("bool", shape=[N], name='y_mask')
+        ph['y'] = y
+        ph['y_mask'] = y_mask
+
+        logits = tensors['logits']
 
         with tf.name_scope("eval"):
             yp = tf.cast(tf.argmax(logits, 1), 'int32')
-            correct = tf.equal(yp, y)
+            correct = tf.logical_and(tf.equal(yp, y), y_mask)
+            wrong = tf.logical_and(tf.not_equal(yp, y), y_mask)
             # TODO : this must be properly defined
             tensors['correct'] = correct
+            tensors['wrong'] = wrong
 
         with tf.name_scope("loss"):
             ce = tf.nn.sparse_softmax_cross_entropy_with_logits(logits, y, name='ce')
@@ -49,9 +62,14 @@ class Tower(BaseTower):
 
         # TODO : define your inputs to _initialize here
         x = np.zeros([N, 1], dtype='float')
-        y = np.zeros([N], dtype='int32')
-        feed_dict = {ph['x']: x, ph['y']: y,
+        feed_dict = {ph['x']: x,
                      ph['is_train']: mode == 'train'}
+
+        if params.supervise:
+            y = np.zeros([N], dtype='int32')
+            y_mask = np.zeros([N], dtype='bool')
+            feed_dict[ph['y']] = y
+            feed_dict[ph['y_mask']] = y_mask
 
         # Batch can be empty in multi GPU parallelization
         if batch is None:
@@ -62,7 +80,10 @@ class Tower(BaseTower):
 
         for i, xx in enumerate(X):
             x[i, 0] = xx
-        for i, yy in enumerate(Y):
-            y[i] = yy
+
+        if params.supervise:
+            for i, yy in enumerate(Y):
+                y[i] = yy
+                y_mask[i] = True
 
         return feed_dict
