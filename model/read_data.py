@@ -8,7 +8,7 @@ NUM = "NUM"
 
 
 class DataSet(object):
-    def __init__(self, data, batch_size, name='default', idxs=None, idx2id=None, shuffle=True):
+    def __init__(self, data, batch_size, name='default', idxs=None, idx2id=None):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
@@ -17,14 +17,13 @@ class DataSet(object):
         self.num_examples = len(next(iter(data.values())))
         if idxs is None:
             idxs = list(range(self.num_examples))
+        self.init_idxs = idxs
         self.idxs = idxs
         if idx2id is None:
             idx2id = {idx: idx for idx in idxs}
         self.idx2id = idx2id
         self.num_full_batches = int(self.num_examples / self.batch_size)
         self.num_all_batches = self.num_full_batches + int(self.num_examples % self.batch_size > 0)
-        self.shuffle = shuffle  # this is for debugging purpose; set it False to disable shuffling after reset
-        self.reset()
 
     def get_num_batches(self, partial=False):
         return self.num_all_batches if partial else self.num_full_batches
@@ -51,14 +50,16 @@ class DataSet(object):
             return self.idx_in_epoch < self.num_examples
         return self.idx_in_epoch + self.batch_size <= self.num_examples
 
-    def complete_epoch(self):
-        self.reset()
+    def complete_epoch(self, shuffle=True):
+        self.reset(shuffle=shuffle)
         self.num_epochs_completed += 1
 
-    def reset(self):
+    def reset(self, shuffle=True):
         self.idx_in_epoch = 0
-        if self.shuffle:
+        if shuffle:
             np.random.shuffle(self.idxs)
+        else:
+            self.idxs = self.init_idxs
 
 
 def read_data(params, mode):

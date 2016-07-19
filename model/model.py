@@ -22,7 +22,9 @@ class Tower(BaseTower):
         # TODO : put your codes here
         with tf.variable_scope("main"):
             logits = linear([x], num_classes, True, scope='logits')
+            yp = tf.cast(tf.argmax(logits, 1), 'int32')
             tensors['logits'] = logits
+            tensors['yp'] = yp
 
     def _initialize_supervision(self):
         params = self.params
@@ -35,9 +37,9 @@ class Tower(BaseTower):
         ph['y_mask'] = y_mask
 
         logits = tensors['logits']
+        yp = tensors['yp']
 
         with tf.name_scope("eval"):
-            yp = tf.cast(tf.argmax(logits, 1), 'int32')
             correct = tf.logical_and(tf.equal(yp, y), y_mask)
             wrong = tf.logical_and(tf.not_equal(yp, y), y_mask)
             # TODO : this must be properly defined
