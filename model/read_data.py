@@ -4,11 +4,13 @@ import os
 
 import numpy as np
 
+from my.utils import _index
+
 NUM = "NUM"
 
 
 class DataSet(object):
-    def __init__(self, data, batch_size, name='default', idxs=None, idx2id=None):
+    def __init__(self, data, batch_size, shared=None, name='default', idxs=None, idx2id=None):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
@@ -24,6 +26,7 @@ class DataSet(object):
         self.idx2id = idx2id
         self.num_full_batches = int(self.num_examples / self.batch_size)
         self.num_all_batches = self.num_full_batches + int(self.num_examples % self.batch_size > 0)
+        self.shared = shared
 
     def get_num_batches(self, partial=False):
         return self.num_all_batches if partial else self.num_full_batches
@@ -43,6 +46,13 @@ class DataSet(object):
         batch[NUM] = len(cur_idxs)
 
         self.idx_in_epoch += len(cur_idxs)
+
+        # handle shared data
+        for key, data in batch.items():
+            if key.startswith("*"):
+                new_key = key[1:]
+                batch[new_key] = [_index(self.shared, ref) for ref in data]
+
         return batch
 
     def has_next_batch(self, partial=False):
