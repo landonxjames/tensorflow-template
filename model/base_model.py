@@ -6,10 +6,10 @@ from collections import defaultdict
 
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 
 from model.read_data import DataSet, NUM
 from my.tensorflow import average_gradients
+from my.utils import mytqdm
 
 
 class BaseRunner(object):
@@ -171,18 +171,13 @@ class BaseRunner(object):
 
         epoch_op = self.tensors['epoch']
         epoch = sess.run(epoch_op)
-        logging.info("training %d epochs ... " % num_epochs)
-        logging.info("num iters per epoch: %d" % num_iters_per_epoch)
-        logging.info("starting from epoch %d." % (epoch+1))
+        string = "starting from epoch {}/{}, {} batches per epoch.".format(epoch+1, num_epochs, num_iters_per_epoch)
+        logging.info(string)
+        print(string)
         while epoch < num_epochs:
             train_args = self._get_train_args(epoch)
-            if progress:
-                pbar = tqdm(range(num_iters_per_epoch))
-                string = "epoch {}|".format(str(epoch+1).zfill(num_digits))
-                pbar.set_description(string)
-            else:
-                pbar = range(num_iters_per_epoch)
-            for _ in pbar:
+            string = "epoch {}|".format(str(epoch+1).zfill(num_digits))
+            for _ in mytqdm(range(num_iters_per_epoch), desc=string, show=progress):
                 batches = [train_data_set.get_next_batch() for _ in range(self.num_towers)]
                 _, summary, global_step = self._train_batches(batches, **train_args)
                 if self.write_log:
@@ -220,13 +215,8 @@ class BaseRunner(object):
         if N > data_set.num_examples:
             N = data_set.num_examples
         eval_args = self._get_eval_args(epoch)
-        if progress:
-            pbar = tqdm(range(num_iters))
-            string = "eval on {}, N={}|".format(data_set.name, N)
-            pbar.set_description(string)
-        else:
-            pbar = range(num_iters)
-        for _ in pbar:
+        string = "eval on {}, N={}|".format(data_set.name, N)
+        for _ in mytqdm(range(num_iters), desc=string, show=progress):
             batches = []
             for _ in range(self.num_towers):
                 if data_set.has_next_batch(partial=True):
@@ -245,8 +235,10 @@ class BaseRunner(object):
         data_set.reset()
 
         acc = float(num_corrects) / total
-        logging.info("%s at epoch %d: acc = %.2f%% = %d / %d, loss = %.4f" %
-                     (data_set.name, epoch, 100 * acc, num_corrects, total, loss))
+        string = "%s at epoch %d: acc = %.2f%% = %d / %d, loss = %.4f" % \
+                     (data_set.name, epoch, 100 * acc, num_corrects, total, loss)
+        logging.info(string)
+        print(string)
 
         # For outputting eval json files
         if len(eval_tensor_names) > 0:

@@ -7,6 +7,7 @@ from pprint import pformat
 
 import tensorflow as tf
 import numpy as np
+import time
 
 from model.base_model import BaseRunner
 from model.model import Tower
@@ -79,15 +80,14 @@ def _init():
     ch.setLevel(logging.DEBUG)
     root.addHandler(ch)
     """
-    logging.basicConfig(filename=stdout_log_path, filemode='a', level=logging.DEBUG)
-
     if os.path.exists(run_dir) and FLAGS.train and not FLAGS.load:
-        logging.warning("removing {}".format(run_dir))
         shutil.rmtree(run_dir)
 
     if not os.path.exists(run_dir):
         os.makedirs(run_dir)
 
+    logging.basicConfig(filename=stdout_log_path, filemode='w', level=logging.DEBUG)
+    logging.info("\n"*3 + time.ctime() + "\n"*3)
 
 
 def _makedirs(config, trial_idx):
@@ -161,12 +161,11 @@ def _main(config, num_trials):
     def get_best_trial_idx(_val_losses):
         return min(enumerate(_val_losses), key=lambda x: x[1])[0]
 
-    val_losses = []
-    val_accs = []
-    test_accs = []
+    losses, accs = [], []
     for trial_idx in range(1, num_trials+1):
-        logging.info("-" * 80)
-        logging.info("Trial {}".format(trial_idx))
+        string = "{}\nTrial {}".format("-"*80, trial_idx)
+        logging.info(string)
+        print(string)
         _makedirs(config, trial_idx)
         graph = tf.Graph()
         # TODO : initialize BaseTower-subclassed objects
@@ -182,22 +181,19 @@ def _main(config, num_trials):
                 val_loss, val_acc = runner.train(train_ds, config.num_epochs, val_data_set=dev_ds,
                                                  num_batches=config.train_num_batches,
                                                  val_num_batches=config.val_num_batches, eval_ph_names=eval_ph_names)
-                val_accs.append(val_acc)
-                val_losses.append(val_loss)
+                accs.append(val_acc)
+                losses.append(val_loss)
             else:
                 runner.load()
                 test_loss, test_acc = runner.eval(test_ds, eval_tensor_names=eval_tensor_names,
                                                   num_batches=config.test_num_batches, eval_ph_names=eval_ph_names)
-                test_accs.append(test_acc)
+                losses.append(test_loss)
+                accs.append(test_acc)
 
-        if config.train:
-            best_trial_idx = get_best_trial_idx(val_losses)
-            logging.info("-" * 80)
-            logging.info("Num trials: {}".format(trial_idx))
-            logging.info("Min val loss: {:.4f}".format(min(val_losses)))
-            logging.info("Trial idx: {}".format(best_trial_idx+1))
-        else:
-            logging.info("Test variances: {}".format(np.std(test_accs)))
+        best_trial_idx = get_best_trial_idx(losses)
+        string = "{}\nMin loss: {:.4f} at Trial {}/{}".format("-"*80, min(losses), best_trial_idx+1, num_trials)
+        logging.info(string)
+        print(string)
 
     summary = ""
     return summary
@@ -219,13 +215,15 @@ def main(_):
         else:
             configs_path = os.path.join(this_dir, "configs%s" % FLAGS.config_ext)
             config = get_config_from_file(FLAGS.__flags, configs_path, config_id)
-        logging.info("=" * 80)
-        logging.info("Config id {}, {} trials".format(config.config_id, num_trials))
+        string = "{}\nConfig id {}, {} trials".format("="*80, config.config_id, num_trials)
+        logging.info(string)
+        print(string)
         summary = _main(config, num_trials)
         summaries.append(summary)
 
-    logging.info("=" * 80)
-    logging.info("SUMMARY")
+    string = "{}\nSUMMARY".format("="*80)
+    logging.info(string)
+    print(string)
     for summary in summaries:
         logging.info(summary)
 
