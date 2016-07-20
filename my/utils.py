@@ -1,6 +1,5 @@
 import json
 
-import progressbar as pb
 from tqdm import tqdm
 
 

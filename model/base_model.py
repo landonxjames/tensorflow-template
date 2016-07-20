@@ -28,7 +28,7 @@ class BaseRunner(object):
         self.train_ops = {}
         self.write_log = params.write_log
 
-    def initialize(self):
+    def _initialize_forward(self):
         params = self.params
         sess = self.sess
         device_type = params.device_type
@@ -57,15 +57,14 @@ class BaseRunner(object):
 
         for var in tf.trainable_variables():
             summaries.append(tf.histogram_summary(var.op.name, var))
-        summary_op = tf.merge_summary(summaries)
-        self.tensors['summary'] = summary_op
-
-        init_op = tf.initialize_all_variables()
-        sess.run(init_op)
-        if self.write_log:
-            self.writer = tf.train.SummaryWriter(params.log_dir, sess.graph)
 
         if not params.supervise:
+            summary_op = tf.merge_summary(summaries)
+            self.tensors['summary'] = summary_op
+            init_op = tf.initialize_all_variables()
+            sess.run(init_op)
+            if self.write_log:
+                self.writer = tf.train.SummaryWriter(params.log_dir, sess.graph)
             return
 
         if params.opt == 'basic':
@@ -82,16 +81,17 @@ class BaseRunner(object):
         wrong_tensors = []
         loss_tensors = []
         for tower in self.towers:
-            loss_tensor = tower.get_loss_tensor()
-            loss_tensors.append(loss_tensor)
-            correct_tensor = tower.get_correct_tensor()
-            correct_tensors.append(correct_tensor)
-            wrong_tensor = tower.get_wrong_tensor()
-            wrong_tensors.append(wrong_tensor)
+            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
+                loss_tensor = tower.get_loss_tensor()
+                loss_tensors.append(loss_tensor)
+                correct_tensor = tower.get_correct_tensor()
+                correct_tensors.append(correct_tensor)
+                wrong_tensor = tower.get_wrong_tensor()
+                wrong_tensors.append(wrong_tensor)
 
-            for key, variables in tower.variables_dict.items():
-                grads_pair = opt.compute_gradients(loss_tensor, var_list=variables)
-                grads_pairs_dict[key].append(grads_pair)
+                for key, variables in tower.variables_dict.items():
+                    grads_pair = opt.compute_gradients(loss_tensor, var_list=variables)
+                    grads_pairs_dict[key].append(grads_pair)
 
         with tf.name_scope("gpu_sync"):
             loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
@@ -115,14 +115,18 @@ class BaseRunner(object):
                 if grad is not None:
                     summaries.append(tf.histogram_summary(var.op.name+'/gradients/'+key, grad))
 
-        summary_op = tf.merge_summary(summaries)
-        self.tensors['summary'] = summary_op
-
         apply_grads_op_dict = {key: opt.apply_gradients(grads_pair, global_step=global_step)
                                for key, grads_pair in grads_pair_dict.items()}
 
         self.train_ops = {key: tf.group(apply_grads_op)
                           for key, apply_grads_op in apply_grads_op_dict.items()}
+
+        summary_op = tf.merge_summary(summaries)
+        self.tensors['summary'] = summary_op
+        init_op = tf.initialize_all_variables()
+        sess.run(init_op)
+        if self.write_log:
+            self.writer = tf.train.SummaryWriter(params.log_dir, sess.graph)
 
     def _get_feed_dict(self, batches, mode, **kwargs):
         placeholders = self.placeholders
