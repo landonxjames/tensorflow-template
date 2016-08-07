@@ -22,19 +22,21 @@ def _train(config):
     train_data = read_data(config, 'train')
     # dev_data = read_data(config, 'dev')
 
-    # use default graph
+    # construct model graph and variables (using default graph)
     model = Model(config)
     trainer = Trainer(config, model)
+    evaluator = Evaluator(config, model)
+
     sess = tf.Session()
+    model.initialize(sess)
 
+    # begin training
     for i, batch in tqdm(enumerate(train_data.get_batches(num_steps=config.num_steps))):
-        # model_temp.get_loss(sess, batch)
-        model.step(sess, trainer.get_train_op(), batch)
+        trainer.step(sess, batch, write=(i % config.log_period == 0))
 
+        # Occasional evaluation and saving
         if i % config.eval_period == 0:
-            print(sum(model.eval(sess, batch, Evaluator) for batch in tqdm(train_data.get_batches())))
-        if i % config.log_period == 0:
-            model.log(sess)
+            print(evaluator.get_evaluation(sess, tqdm(train_data.get_batches()), write=True))
         if i % config.save_period == 0:
             model.save(sess)
 
@@ -43,9 +45,12 @@ def _test(config):
     test_data = read_data(config, 'test')
 
     model = Model(config)
+    evaluator = Evaluator(config, model)
+
     sess = tf.Session()
-    model.load(sess)
-    print(model.eval(sess, test_data, Evaluator))
+    model.initialize(sess)
+
+    print(evaluator.get_evaluation(sess, tqdm(test_data.get_batches())))
 
 
 def _get_args():

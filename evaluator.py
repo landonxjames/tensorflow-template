@@ -12,8 +12,12 @@ class Evaluation(object):
 
 
 class Evaluator(object):
-    input_names = ('x', 'y')
+    def __init__(self, config, model):
+        self.config = config
+        self.model = model
+        self.input_names = ('x', 'y')
+        self.writer = writer
 
-    @staticmethod
-    def evaluate(dict_):
+    def get_evaluation(self, sess, batches, write=None):
         return Evaluation('train', 0, 0.0)
+

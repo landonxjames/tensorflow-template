@@ -1,9 +1,13 @@
+import os
+
 import tensorflow as tf
 
 
 class Model(object):
     def __init__(self, config):
         self.config = config
+        self.writer = None
+        self.saver = tf.train.Saver()
         self.global_step = tf.get_variable('global_step', shape=[], dtype='int32',
                                            initializer=tf.constant_initializer(0), trainable=False)
         self.loss = None
@@ -28,23 +32,24 @@ class Model(object):
     def get_var_list(self):
         return self.var_list
 
-    def _get_feed_dict(self, batch):
+    def get_feed_dict(self, batch):
         return {}
 
-    def step(self, sess, train_op, batch):
-        assert isinstance(sess, tf.Session)
-        feed_dict = self._get_feed_dict(batch)
-        loss = tf.get_collection('loss')
-        return sess.run([loss, train_op], feed_dict=feed_dict)
+    def initialize(self, sess):
+        if self.config.load:
+            self._load(sess)
+        else:
+            sess.run(tf.initialize_all_variables())
 
-    def log(self, sess):
-        pass
+        if self.config.train:
+            self.writer = tf.train.SummaryWriter(self.config.log_dir)
 
     def save(self, sess):
-        pass
+        self.saver.save(sess, self.config.save_dir, self.global_step)
 
-    def load(self, sess):
-        pass
+    def _load(self, sess):
+        save_dir = self.config.save_dir
+        checkpoint = tf.train.get_checkpoint_state(save_dir)
+        assert checkpoint is not None, "Cannot load checkpoint at {}".format(save_dir)
+        self.saver.restore(sess, checkpoint.model_checkpoint_path)
 
-    def eval(self, sess, batch, Evaluator):
-        pass
