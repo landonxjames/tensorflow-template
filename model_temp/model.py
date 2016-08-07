@@ -1,5 +1,5 @@
 import tensorflow as tf
-from model.base_model import BaseTower
+from model_temp.base_model import BaseTower
 import numpy as np
 
 from my.tensorflow.nn import linear

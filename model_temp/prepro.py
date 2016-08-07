@@ -8,8 +8,8 @@ from collections import OrderedDict
 def get_args():
     parser = argparse.ArgumentParser()
     home = os.path.expanduser("~")
-    source_dir = os.path.join(home, "data", "model")
-    target_dir = "data/model"
+    source_dir = os.path.join(home, "data", "model_temp")
+    target_dir = "data/model_temp"
     parser.add_argument("--source_dir", default=source_dir)
     parser.add_argument("--target_dir", default=target_dir)
     # TODO : put more args here

@@ -9,16 +9,16 @@ import tensorflow as tf
 import numpy as np
 import time
 
-from model.base_model import BaseRunner
-from model.model import Tower
+from model_temp.base_model import BaseRunner
+from model_temp.model import Tower
 from config.get_config import get_config_from_file, get_config
-from model.read_data import read_data
+from model_temp.read_data import read_data
 
 flags = tf.app.flags
 
 # File directories
-flags.DEFINE_string("model_name", "model", "Model name. This will be used for save, log, and eval names. [model]")
-flags.DEFINE_string("data_dir", "data/model", "Data directory [data/model]")
+flags.DEFINE_string("model_name", "model_temp", "Model name. This will be used for save, log, and eval names. [model_temp]")
+flags.DEFINE_string("data_dir", "data/model_temp", "Data directory [data/model_temp]")
 
 # Training parameters
 # These affect result performance
@@ -41,7 +41,7 @@ flags.DEFINE_boolean("supervise", True, "Supervise? Must be True if train=True. 
 flags.DEFINE_integer("val_num_batches", 0, "Val num batches. 0 for max possible. [0]")
 flags.DEFINE_integer("train_num_batches", 0, "Train num batches. 0 for max possible [0]")
 flags.DEFINE_integer("test_num_batches", 0, "Test num batches. 0 for max possible [0]")
-flags.DEFINE_boolean("load", True, "Load from saved model? [True]")
+flags.DEFINE_boolean("load", True, "Load from saved model_temp? [True]")
 flags.DEFINE_boolean("progress", False, "Show progress bar? [False]")
 flags.DEFINE_string("device_type", 'gpu', "cpu | gpu [gpu]")
 flags.DEFINE_integer("num_devices", 1, "Number of devices to use. Only for multi-GPU. [1]")

@@ -7,7 +7,7 @@ from collections import defaultdict
 import numpy as np
 import tensorflow as tf
 
-from model.read_data import DataSet, NUM
+from model_temp.read_data import DataSet, NUM
 from my.tensorflow import average_gradients
 from my.utils import mytqdm
 
@@ -308,7 +308,7 @@ class BaseRunner(object):
         save_dir = params.save_dir
         name = params.model_name
         global_step = self.tensors['global_step']
-        logging.info("saving model ...")
+        logging.info("saving model_temp ...")
         save_path = os.path.join(save_dir, name)
         self.saver.save(sess, save_path, global_step)
         logging.info("saving done.")
@@ -319,7 +319,7 @@ class BaseRunner(object):
         sess = self.sess
         params = self.params
         save_dir = params.save_dir
-        logging.info("loading model ...")
+        logging.info("loading model_temp ...")
         checkpoint = tf.train.get_checkpoint_state(save_dir)
         assert checkpoint is not None, "Cannot load checkpoint at %s" % save_dir
         self.saver.restore(sess, checkpoint.model_checkpoint_path)
