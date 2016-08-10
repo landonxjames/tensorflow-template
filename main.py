@@ -39,15 +39,15 @@ def _train(config):
 
     # begin training
     num_steps = config.num_steps or int(config.num_epochs * train_data.num_examples / config.batch_size)
-    num_steps_per_epoch = math.ceil(train_data.num_examples / config.batch_size)
-    for i, batch in tqdm(enumerate(train_data.get_batches(config.batch_size, num_batches=num_steps)), total=num_steps):
-        trainer.step(sess, batch, write=(i % config.log_period == 0))
+    for batch in tqdm(train_data.get_batches(config.batch_size, num_batches=num_steps), total=num_steps):
+        global_step = sess.run(model.global_step) + 1  # +1 because all calculations are done after step
+        trainer.step(sess, batch, write=(global_step % config.log_period == 0))
 
         # Occasional evaluation and saving
-        if i % config.eval_period == 0:
-            e = evaluator.get_evaluation(sess, tqdm(train_data.get_batches(config.batch_size), total=num_steps_per_epoch), write=True)
-            print(e)
-        if i % config.save_period == 0:
+        if global_step % config.eval_period == 0:
+            e = evaluator.get_evaluation_from_batches(sess, train_data.get_batches(config.batch_size), write=True)
+            # print(e)
+        if global_step % config.save_period == 0:
             model.save(sess)
 
 
@@ -61,7 +61,9 @@ def _test(config):
     sess = tf.Session()
     model.initialize(sess)
 
-    e = evaluator.get_evaluation(sess, tqdm(test_data.get_batches(config.batch_size)))
+    num_steps_per_epoch = math.ceil(test_data.num_examples / config.batch_size)
+    e = evaluator.get_evaluation_from_batches(sess, tqdm(test_data.get_batches(config.batch_size), total=num_steps_per_epoch))
+    print(e)
 
 
 def _get_args():

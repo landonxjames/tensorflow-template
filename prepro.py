@@ -13,7 +13,8 @@ def get_args():
     target_dir = "data/basic"
     parser.add_argument("--source_dir", default=source_dir)
     parser.add_argument("--target_dir", default=target_dir)
-    parser.add_argument("--size", default=1000)
+    parser.add_argument("--size", default=1000, type=int)
+    parser.add_argument("--std", default=0.5, type=float)
     # TODO : put more args here
     return parser.parse_args()
 
@@ -21,10 +22,11 @@ def get_args():
 def prepro(args):
     target_dir = args.target_dir
     size = args.size
+    std = args.std
 
     def gen(n, label):
         mean = [1, -1] if label == 0 else [1, 1]
-        cov = [[0.5, 0], [0, 0.5]]
+        cov = [[std, 0], [0, std]]
         x = np.random.multivariate_normal(mean, cov, size=[n]).tolist()
         y = list(itertools.repeat(label, n))
         return x, y

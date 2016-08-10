@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 
 from my.tensorflow.nn import linear
+from read_data import DataSet
 
 
 class Model(object):
@@ -19,6 +20,7 @@ class Model(object):
 
         # Forward outputs / loss inputs
         self.logits = None
+        self.summary = None
         self.var_list = None
 
         # Loss outputs
@@ -29,9 +31,10 @@ class Model(object):
             self._build_loss()
 
     def _build_forward(self):
-        aff1 = linear([self.x], self.config.num_classes, True, scope='aff1')
-        # relu1 = tf.nn.relu(aff1, 'relu1')
-        self.logits = aff1
+        aff1 = linear([self.x], 4, True, scope='aff1')
+        relu1 = tf.nn.relu(aff1, name='relu1')
+        aff2 = linear([relu1], 2, True, scope='aff2')
+        self.logits = aff2
 
     def _build_loss(self):
         ce_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits, self.y, name='loss'))
@@ -48,19 +51,22 @@ class Model(object):
         return self.var_list
 
     def get_feed_dict(self, batch):
+        assert isinstance(batch, DataSet)
         N, d = self.config.batch_size, self.config.dim
-        x = np.zeros([N, d], dtype='float')
-        y = np.zeros([N], dtype='int')
-        feed_dict = {self.x: x, self.y: y}
+        feed_dict = {}
 
-        # Filling
-        X, Y = batch['X'], batch['Y']
+        x = np.zeros([N, d], dtype='float')
+        feed_dict[self.x] = x
+        X, Y = batch.data['X'], batch.data['Y']
         for i, xi in enumerate(X):
             for j, xij in enumerate(xi):
                 x[i, j] = xij
 
-        for i, yi in enumerate(Y):
-            y[i] = yi
+        if self.config.supervised:
+            y = np.zeros([N], dtype='int')
+            feed_dict[self.y] = y
+            for i, yi in enumerate(Y):
+                y[i] = yi
 
         return feed_dict
 
@@ -77,12 +83,12 @@ class Model(object):
 
     def save(self, sess):
         save_path = os.path.join(self.config.save_dir, self.config.model_name)
-        self.saver.save(sess, save_path, self.global_step)
+        self.saver.save(sess, save_path, global_step=self.global_step)
 
     def _load(self, sess):
         save_dir = self.config.save_dir
         checkpoint = tf.train.get_checkpoint_state(save_dir)
-        assert checkpoint is not None, "Cannot load checkpoint at {}".format(save_dir)
+        assert checkpoint is not None, "cannot load checkpoint at {}".format(save_dir)
         self.saver.restore(sess, checkpoint.model_checkpoint_path)
 
 
