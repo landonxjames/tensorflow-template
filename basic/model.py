@@ -20,14 +20,14 @@ class Model(object):
 
         # Forward outputs / loss inputs
         self.logits = None
+        self.yp = None
         self.var_list = None
 
         # Loss outputs
         self.loss = None
 
         self._build_forward()
-        if config.supervised:
-            self._build_loss()
+        self._build_loss()
 
         self.summary = tf.merge_all_summaries()
 
@@ -35,7 +35,9 @@ class Model(object):
         aff1 = linear([self.x], 4, True, scope='aff1')
         relu1 = tf.nn.relu(aff1, name='relu1')
         aff2 = linear([relu1], 2, True, scope='aff2')
+        yp = tf.nn.softmax(aff2, name='yp')
         self.logits = aff2
+        self.yp = yp
 
     def _build_loss(self):
         ce_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits, self.y, name='loss'))
@@ -52,21 +54,22 @@ class Model(object):
     def get_var_list(self):
         return self.var_list
 
-    def get_feed_dict(self, batch):
+    def get_feed_dict(self, batch, supervised=True):
         assert isinstance(batch, DataSet)
         N, d = self.config.batch_size, self.config.dim
         feed_dict = {}
 
         x = np.zeros([N, d], dtype='float')
         feed_dict[self.x] = x
-        X, Y = batch.data['X'], batch.data['Y']
+        X = batch.data['X']
         for i, xi in enumerate(X):
             for j, xij in enumerate(xi):
                 x[i, j] = xij
 
-        if self.config.supervised:
+        if supervised:
             y = np.zeros([N], dtype='int')
             feed_dict[self.y] = y
+            Y = batch.data['Y']
             for i, yi in enumerate(Y):
                 y[i] = yi
 
@@ -80,7 +83,7 @@ class Model(object):
         else:
             sess.run(tf.initialize_all_variables())
 
-        if self.config.train:
+        if self.config.mode == 'train':
             self.writer = tf.train.SummaryWriter(self.config.log_dir)
 
     def save(self, sess):

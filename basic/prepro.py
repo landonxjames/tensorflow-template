@@ -31,10 +31,12 @@ def prepro(args):
         y = list(itertools.repeat(label, n))
         return x, y
 
-    def create_data(mode, n):
+    def create_data(mode, n, supervised=True):
         x0, y0 = gen(int(n/2), 0)
         x1, y1 = gen(int(n/2), 1)
-        data = {'X': x0 + x1, 'Y': y0 + y1}
+        data = {'X': x0 + x1}
+        if supervised:
+            data['Y'] = y0 + y1
         metadata = {'num_classes': 2, 'dim': 2}
         data_path = os.path.join(target_dir, "data_{}.json".format(mode))
         metadata_path = os.path.join(target_dir, "metadata_{}.json".format(mode))
@@ -49,6 +51,7 @@ def prepro(args):
     create_data('train', int(size * 0.7))
     create_data('dev', int(size * 0.1))
     create_data('test', int(size * 0.2))
+    create_data('forward', int(size * 0.5), supervised=False)
 
 
 def main():

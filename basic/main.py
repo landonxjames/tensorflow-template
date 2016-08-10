@@ -7,7 +7,7 @@ import shutil
 import tensorflow as tf
 from tqdm import tqdm
 
-from basic.evaluator import Evaluator
+from basic.evaluator import AccuracyEvaluator, Evaluator
 from basic.model import Model
 from basic.trainer import Trainer
 
@@ -15,22 +15,26 @@ from basic.read_data import load_metadata, read_data
 
 
 def main(config):
-    if config.train:
+    set_dirs(config)
+    if config.mode == 'train':
         _train(config)
-    else:
+    elif config.mode == 'test':
         _test(config)
+    elif config.mode == 'forward':
+        _forward(config)
+    else:
+        raise ValueError("invalid value for 'mode': {}".format(config.mode))
 
 
 def _train(config):
     load_metadata(config, 'train')  # this updates the config file according to metadata file
-    set_dirs(config)
     train_data = read_data(config, 'train')
     dev_data = read_data(config, 'dev')
 
     # construct model graph and variables (using default graph)
     model = Model(config)
     trainer = Trainer(config, model)
-    evaluator = Evaluator(config, model)
+    evaluator = AccuracyEvaluator(config, model)
 
     # Variables
     sess = tf.Session()
@@ -38,7 +42,7 @@ def _train(config):
 
     # begin training
     num_steps = config.num_steps or int(config.num_epochs * train_data.num_examples / config.batch_size)
-    for batch in tqdm(train_data.get_batches(config.batch_size, num_batches=num_steps), total=num_steps):
+    for batch in tqdm(train_data.get_batches(config.batch_size, num_batches=num_steps, shuffle=True), total=num_steps):
         global_step = sess.run(model.global_step) + 1  # +1 because all calculations are done after step
         trainer.step(sess, batch, write=(global_step % config.log_period == 0))
 
@@ -47,14 +51,29 @@ def _train(config):
             e = evaluator.get_evaluation_from_batches(sess, dev_data.get_batches(config.batch_size), write=True)
             e.dump(config.eval_dir)
             print(e)
-        if global_step % config.save_period == 0:
+        if global_step % config.save_period == 0 or global_step == num_steps:
             model.save(sess)
 
 
 def _test(config):
     load_metadata(config, 'test')  # this updates the config file according to metadata file
-    set_dirs(config)
     test_data = read_data(config, 'test')
+
+    model = Model(config)
+    evaluator = AccuracyEvaluator(config, model)
+
+    sess = tf.Session()
+    model.initialize(sess)
+
+    num_steps_per_epoch = math.ceil(test_data.num_examples / config.batch_size)
+    e = evaluator.get_evaluation_from_batches(sess, tqdm(test_data.get_batches(config.batch_size), total=num_steps_per_epoch))
+    e.dump(config.eval_dir)
+    print(e)
+
+
+def _forward(config):
+    load_metadata(config, 'forward')
+    forward_data = read_data(config, 'forward')
 
     model = Model(config)
     evaluator = Evaluator(config, model)
@@ -62,8 +81,8 @@ def _test(config):
     sess = tf.Session()
     model.initialize(sess)
 
-    num_steps_per_epoch = math.ceil(test_data.num_examples / config.batch_size)
-    e = evaluator.get_evaluation_from_batches(sess, tqdm(test_data.get_batches(config.batch_size), total=num_steps_per_epoch))
+    num_steps_per_epoch = math.ceil(forward_data.num_examples / config.batch_size)
+    e = evaluator.get_evaluation_from_batches(sess, tqdm(forward_data.get_batches(config.batch_size), total=num_steps_per_epoch))
     e.dump(config.eval_dir)
     print(e)
 

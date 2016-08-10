@@ -14,13 +14,15 @@ class DataSet(object):
         self.data_type = data_type
         self.shared = shared
 
-    def get_batches(self, batch_size, num_batches=None):
+    def get_batches(self, batch_size, num_batches=None, shuffle=False):
         num_batches_per_epoch = int(math.ceil(self.num_examples / batch_size))
         if num_batches is None:
             num_batches = num_batches_per_epoch
         num_epochs = int(math.ceil(num_batches / num_batches_per_epoch))
 
-        idxs = itertools.chain.from_iterable(random.sample(range(self.num_examples), self.num_examples) for _ in range(num_epochs))
+        idxs = itertools.chain.from_iterable(random.sample(range(self.num_examples), self.num_examples)
+                                             if shuffle else range(self.num_examples)
+                                             for _ in range(num_epochs))
         for _ in range(num_batches):
             batch_idxs = tuple(itertools.islice(idxs, batch_size))
             batch_data = {}

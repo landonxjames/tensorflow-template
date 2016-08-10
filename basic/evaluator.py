@@ -7,35 +7,28 @@ import tensorflow as tf
 from basic.read_data import DataSet
 
 
-class AccuracyEvaluation(object):
-    def __init__(self, data_type, global_step, correct, loss):
+class Evaluation(object):
+    def __init__(self, data_type, global_step, yp):
         self.data_type = data_type
         self.global_step = global_step
-        self.loss = loss
-        self.correct = correct
-        self.num_examples = len(correct)
-        self.acc = sum(correct) / len(correct)
-        dict_ = {'data_type': data_type,
-                 'global_step': global_step,
-                 'loss': loss,
-                 'correct': correct,
-                 'num_examples': len(correct),
-                 'acc': sum(correct) / len(correct)}
-        self.dict = dict_
-        value = tf.Summary.Value(tag='dev_loss', simple_value=self.loss)
-        self.summary = tf.Summary(value=[value])
+        self.yp = yp
+        self.num_examples = len(yp)
+        self.dict = {'data_type': data_type,
+                     'global_step': global_step,
+                     'yp': yp,
+                     'num_examples': self.num_examples}
+        self.summary = None
 
     def __repr__(self):
-        return "step {}: accuracy={}, loss={}".format(self.global_step, self.acc, self.loss)
+        return "{} step {}".format(self.data_type, self.global_step)
 
     def __add__(self, other):
         if other == 0:
             return self
         assert self.data_type == other.data_type
         assert self.global_step == other.global_step
-        new_correct = self.correct + other.correct
-        new_loss = (self.loss * self.num_examples + other.loss * other.num_examples) / len(new_correct)
-        return AccuracyEvaluation(self.data_type, self.global_step, new_correct, new_loss)
+        new_yp = self.yp + other.yp
+        return Evaluation(self.data_type, self.global_step, new_yp)
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -46,20 +39,43 @@ class AccuracyEvaluation(object):
             json.dump(self.dict, fh)
 
 
+class AccuracyEvaluation(Evaluation):
+    def __init__(self, data_type, global_step, yp, correct, loss):
+        super(AccuracyEvaluation, self).__init__(data_type, global_step, yp)
+        self.loss = loss
+        self.correct = correct
+        self.acc = sum(correct) / len(correct)
+        self.dict['loss'] = loss
+        self.dict['correct'] = correct
+        self.dict['acc'] = self.acc
+        value = tf.Summary.Value(tag='dev/loss', simple_value=self.loss)
+        self.summary = tf.Summary(value=[value])
+
+    def __repr__(self):
+        return "{} step {}: accuracy={}, loss={}".format(self.data_type, self.global_step, self.acc, self.loss)
+
+    def __add__(self, other):
+        if other == 0:
+            return self
+        assert self.data_type == other.data_type
+        assert self.global_step == other.global_step
+        new_yp = self.yp + other.yp
+        new_correct = self.correct + other.correct
+        new_loss = (self.loss * self.num_examples + other.loss * other.num_examples) / len(new_correct)
+        return AccuracyEvaluation(self.data_type, self.global_step, new_yp, new_correct, new_loss)
+
+
 class Evaluator(object):
     def __init__(self, config, model):
         self.config = config
         self.model = model
 
     def get_evaluation(self, sess, data_set, write=False):
-        assert isinstance(data_set, DataSet)
-        feed_dict = self.model.get_feed_dict(data_set)
-        global_step, logits, loss = sess.run([self.model.global_step, self.model.logits, self.model.loss], feed_dict=feed_dict)
-        logits = logits[:data_set.num_examples]
-        correct = (np.argmax(logits, 1) == np.array(data_set.data['Y'])).tolist()
-        e = AccuracyEvaluation(data_set.data_type, int(global_step), correct, float(loss))
-        if write:
-            self.model.add_summary(e.summary, global_step)
+        assert not write, "This evaluator does not support writing"
+        feed_dict = self.model.get_feed_dict(data_set, supervised=False)
+        global_step, yp = sess.run([self.model.global_step, self.model.yp], feed_dict=feed_dict)
+        yp = yp[:data_set.num_examples]
+        e = Evaluation(data_set.data_type, int(global_step), yp.tolist())
         return e
 
     def get_evaluation_from_batches(self, sess, batches, write=False):
@@ -67,3 +83,18 @@ class Evaluator(object):
         if write:
             self.model.add_summary(e.summary, e.global_step)
         return e
+
+
+class AccuracyEvaluator(Evaluator):
+    def get_evaluation(self, sess, data_set, write=False):
+        assert isinstance(data_set, DataSet)
+        feed_dict = self.model.get_feed_dict(data_set)
+        global_step, yp, loss = sess.run([self.model.global_step, self.model.yp, self.model.loss], feed_dict=feed_dict)
+        y = np.array(data_set.data['Y'])
+        yp = yp[:data_set.num_examples]
+        correct = np.argmax(yp, 1) == y
+        e = AccuracyEvaluation(data_set.data_type, int(global_step), yp.tolist(), correct.tolist(), float(loss))
+        if write:
+            self.model.add_summary(e.summary, global_step)
+        return e
+
