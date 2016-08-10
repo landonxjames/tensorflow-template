@@ -8,8 +8,6 @@ from main import main as m
 flags = tf.app.flags
 
 flags.DEFINE_string("model_name", "basic", "Model name [basic]")
-flags.DEFINE_string("data_dir", "data/basic", "Data directory [data/basic]")
-flags.DEFINE_string("out_dir", "out", "Outputs (save, log, eval) directory [out]")
 
 flags.DEFINE_integer("batch_size", 32, "Batch size [32]")
 flags.DEFINE_float("init_lr", 0.5, "Initial learning rate [0.5]")
@@ -30,10 +28,8 @@ flags.DEFINE_boolean("draft", False, "Draft for quick testing? [False]")
 def main(_):
     config = flags.FLAGS
 
-    out_dir = config.out_dir
-    config.save_dir = os.path.join(out_dir, "save")
-    config.log_dir = os.path.join(out_dir, "log")
-    config.eval_dir = os.path.join(out_dir, "eval")
+    config.data_dir = os.path.join("data", config.model_name)
+    config.out_dir = os.path.join("out", config.model_name)
 
     pprint(config.__dict__, indent=2)
     m(config)

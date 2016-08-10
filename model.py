@@ -20,7 +20,6 @@ class Model(object):
 
         # Forward outputs / loss inputs
         self.logits = None
-        self.summary = None
         self.var_list = None
 
         # Loss outputs
@@ -29,6 +28,8 @@ class Model(object):
         self._build_forward()
         if config.supervised:
             self._build_loss()
+
+        self.summary = tf.merge_all_summaries()
 
     def _build_forward(self):
         aff1 = linear([self.x], 4, True, scope='aff1')
@@ -40,6 +41,7 @@ class Model(object):
         ce_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits, self.y, name='loss'))
         tf.add_to_collection('losses', ce_loss)
         self.loss = tf.add_n(tf.get_collection('losses'))
+        tf.scalar_summary('loss', self.loss)
 
     def get_loss(self):
         return self.loss
@@ -90,5 +92,8 @@ class Model(object):
         checkpoint = tf.train.get_checkpoint_state(save_dir)
         assert checkpoint is not None, "cannot load checkpoint at {}".format(save_dir)
         self.saver.restore(sess, checkpoint.model_checkpoint_path)
+
+    def add_summary(self, summary, global_step):
+        self.writer.add_summary(summary, global_step)
 
 
