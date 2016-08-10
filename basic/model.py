@@ -1,10 +1,10 @@
 import os
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
+from basic.read_data import DataSet
 from my.tensorflow.nn import linear
-from read_data import DataSet
 
 
 class Model(object):

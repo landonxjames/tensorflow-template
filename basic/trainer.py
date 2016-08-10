@@ -1,7 +1,6 @@
-import itertools
 import tensorflow as tf
 
-from model import Model
+from basic.model import Model
 
 
 class Trainer(object):

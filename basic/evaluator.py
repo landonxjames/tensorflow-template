@@ -4,7 +4,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from read_data import DataSet
+from basic.read_data import DataSet
 
 
 class AccuracyEvaluation(object):

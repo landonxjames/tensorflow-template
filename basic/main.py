@@ -1,16 +1,17 @@
+import argparse
 import json
 import math
-import argparse
 import os
 import shutil
 
 import tensorflow as tf
 from tqdm import tqdm
 
-from trainer import Trainer
-from read_data import load_metadata, read_data
-from model import Model
-from evaluator import Evaluator
+from basic.evaluator import Evaluator
+from basic.model import Model
+from basic.trainer import Trainer
+
+from basic.read_data import load_metadata, read_data
 
 
 def main(config):
