@@ -16,8 +16,7 @@ class Evaluator(object):
         self.config = config
         self.model = model
         self.input_names = ('x', 'y')
-        self.writer = writer
 
-    def get_evaluation(self, sess, batches, write=None):
+    def get_evaluation(self, sess, batches, write=False):
         return Evaluation('train', 0, 0.0)
 

@@ -17,12 +17,11 @@ class Trainer(object):
         train_op = opt.apply_gradients(grads, global_step=global_step)
         self.train_op = train_op
         self.loss = model.get_loss()
-        self.writer = writer
 
     def get_train_op(self):
         return self.train_op
 
-    def step(self, sess, batch, write=None):
+    def step(self, sess, batch, write=False):
         assert isinstance(sess, tf.Session)
         feed_dict = self.model.get_feed_dict(batch)
         return sess.run([self.loss, self.train_op], feed_dict=feed_dict)
