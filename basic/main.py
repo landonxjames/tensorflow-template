@@ -8,6 +8,7 @@ import tensorflow as tf
 from tqdm import tqdm
 
 from basic.evaluator import AccuracyEvaluator, Evaluator
+from basic.graph_handler import GraphHandler
 from basic.model import Model
 from basic.trainer import Trainer
 
@@ -35,24 +36,29 @@ def _train(config):
     model = Model(config)
     trainer = Trainer(config, model)
     evaluator = AccuracyEvaluator(config, model)
+    graph_handler = GraphHandler(config)  # controls all tensors and variables in the graph, including loading /saving
 
     # Variables
     sess = tf.Session()
-    model.initialize(sess)
+    graph_handler.initialize(sess)
 
     # begin training
     num_steps = config.num_steps or int(config.num_epochs * train_data.num_examples / config.batch_size)
     for batch in tqdm(train_data.get_batches(config.batch_size, num_batches=num_steps, shuffle=True), total=num_steps):
         global_step = sess.run(model.global_step) + 1  # +1 because all calculations are done after step
-        trainer.step(sess, batch, write=(global_step % config.log_period == 0))
+        get_summary = global_step % config.log_period == 0
+        loss, summary, train_op = trainer.step(sess, batch, get_summary=get_summary)
+        if get_summary:
+            graph_handler.add_summary(summary, global_step)
 
         # Occasional evaluation and saving
         if global_step % config.eval_period == 0:
-            e = evaluator.get_evaluation_from_batches(sess, dev_data.get_batches(config.batch_size), write=True)
-            e.dump(config.eval_dir)
+            e = evaluator.get_evaluation_from_batches(sess, dev_data.get_batches(config.batch_size))
+            graph_handler.add_summary(e.summary, global_step)
+            graph_handler.dump_eval(e)
             print(e)
         if global_step % config.save_period == 0 or global_step == num_steps:
-            model.save(sess)
+            graph_handler.save(sess, global_step=global_step)
 
 
 def _test(config):
@@ -61,13 +67,14 @@ def _test(config):
 
     model = Model(config)
     evaluator = AccuracyEvaluator(config, model)
+    graph_handler = GraphHandler(config)  # controls all tensors and variables in the graph, including loading /saving
 
     sess = tf.Session()
-    model.initialize(sess)
+    graph_handler.initialize(sess)
 
     num_steps_per_epoch = math.ceil(test_data.num_examples / config.batch_size)
     e = evaluator.get_evaluation_from_batches(sess, tqdm(test_data.get_batches(config.batch_size), total=num_steps_per_epoch))
-    e.dump(config.eval_dir)
+    graph_handler.dump_eval(e)
     print(e)
 
 
@@ -77,13 +84,14 @@ def _forward(config):
 
     model = Model(config)
     evaluator = Evaluator(config, model)
+    graph_handler = GraphHandler(config)  # controls all tensors and variables in the graph, including loading /saving
 
     sess = tf.Session()
-    model.initialize(sess)
+    graph_handler.initialize(sess)
 
     num_steps_per_epoch = math.ceil(forward_data.num_examples / config.batch_size)
     e = evaluator.get_evaluation_from_batches(sess, tqdm(forward_data.get_batches(config.batch_size), total=num_steps_per_epoch))
-    e.dump(config.eval_dir)
+    graph_handler.dump_eval(e)
     print(e)
 
 

@@ -33,11 +33,6 @@ class Evaluation(object):
     def __radd__(self, other):
         return self.__add__(other)
 
-    def dump(self, root_dir):
-        path = os.path.join(root_dir, "{}-{}.json".format(self.data_type, str(self.global_step).zfill(3)))
-        with open(path, 'w') as fh:
-            json.dump(self.dict, fh)
-
 
 class AccuracyEvaluation(Evaluation):
     def __init__(self, data_type, global_step, yp, correct, loss):
@@ -70,23 +65,20 @@ class Evaluator(object):
         self.config = config
         self.model = model
 
-    def get_evaluation(self, sess, data_set, write=False):
-        assert not write, "This evaluator does not support writing"
+    def get_evaluation(self, sess, data_set):
         feed_dict = self.model.get_feed_dict(data_set, supervised=False)
         global_step, yp = sess.run([self.model.global_step, self.model.yp], feed_dict=feed_dict)
         yp = yp[:data_set.num_examples]
         e = Evaluation(data_set.data_type, int(global_step), yp.tolist())
         return e
 
-    def get_evaluation_from_batches(self, sess, batches, write=False):
+    def get_evaluation_from_batches(self, sess, batches):
         e = sum(self.get_evaluation(sess, batch) for batch in batches)
-        if write:
-            self.model.add_summary(e.summary, e.global_step)
         return e
 
 
 class AccuracyEvaluator(Evaluator):
-    def get_evaluation(self, sess, data_set, write=False):
+    def get_evaluation(self, sess, data_set):
         assert isinstance(data_set, DataSet)
         feed_dict = self.model.get_feed_dict(data_set)
         global_step, yp, loss = sess.run([self.model.global_step, self.model.yp, self.model.loss], feed_dict=feed_dict)
@@ -94,7 +86,5 @@ class AccuracyEvaluator(Evaluator):
         yp = yp[:data_set.num_examples]
         correct = np.argmax(yp, 1) == y
         e = AccuracyEvaluation(data_set.data_type, int(global_step), yp.tolist(), correct.tolist(), float(loss))
-        if write:
-            self.model.add_summary(e.summary, global_step)
         return e
 

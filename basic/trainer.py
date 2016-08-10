@@ -18,13 +18,13 @@ class Trainer(object):
     def get_train_op(self):
         return self.train_op
 
-    def step(self, sess, batch, write=False):
+    def step(self, sess, batch, get_summary=False):
         assert isinstance(sess, tf.Session)
         feed_dict = self.model.get_feed_dict(batch)
-        if write:
-            global_step, loss, summary, train_op = \
-                sess.run([self.global_step, self.loss, self.model.summary, self.train_op], feed_dict=feed_dict)
-            self.model.add_summary(summary, global_step)
+        if get_summary:
+            loss, summary, train_op = \
+                sess.run([self.loss, self.model.summary, self.train_op], feed_dict=feed_dict)
         else:
             loss, train_op = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
-        return loss, train_op
+            summary = None
+        return loss, summary, train_op

@@ -75,28 +75,4 @@ class Model(object):
 
         return feed_dict
 
-    def initialize(self, sess):
-        self.saver = tf.train.Saver()
-
-        if self.config.load:
-            self._load(sess)
-        else:
-            sess.run(tf.initialize_all_variables())
-
-        if self.config.mode == 'train':
-            self.writer = tf.train.SummaryWriter(self.config.log_dir)
-
-    def save(self, sess):
-        save_path = os.path.join(self.config.save_dir, self.config.model_name)
-        self.saver.save(sess, save_path, global_step=self.global_step)
-
-    def _load(self, sess):
-        save_dir = self.config.save_dir
-        checkpoint = tf.train.get_checkpoint_state(save_dir)
-        assert checkpoint is not None, "cannot load checkpoint at {}".format(save_dir)
-        self.saver.restore(sess, checkpoint.model_checkpoint_path)
-
-    def add_summary(self, summary, global_step):
-        self.writer.add_summary(summary, global_step)
-
 
