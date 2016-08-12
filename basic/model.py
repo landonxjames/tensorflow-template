@@ -12,8 +12,8 @@ class Model(object):
                                            initializer=tf.constant_initializer(0), trainable=False)
 
         # Define forward inputs here
-        self.x = tf.placeholder('float', [config.batch_size, config.dim], name='x')
-        self.y = tf.placeholder('int32', [config.batch_size], name='y')
+        self.x = tf.placeholder('float', [None, config.dim], name='x')
+        self.y = tf.placeholder('int32', [None], name='y')
 
         # Define misc
 
