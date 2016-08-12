@@ -8,8 +8,6 @@ from my.tensorflow.nn import linear
 class Model(object):
     def __init__(self, config):
         self.config = config
-        self.writer = None
-        self.saver = None
         self.global_step = tf.get_variable('global_step', shape=[], dtype='int32',
                                            initializer=tf.constant_initializer(0), trainable=False)
 
@@ -29,7 +27,9 @@ class Model(object):
 
         self._build_forward()
         self._build_loss()
-        self._build_ema()
+
+        self.ema_op = self._get_ema_op()
+        self.summary = tf.merge_all_summaries()
 
     def _build_forward(self):
         aff1 = linear([self.x], 4, True, scope='aff1')
@@ -49,15 +49,16 @@ class Model(object):
         tf.scalar_summary(self.loss.op.name, self.loss)
         tf.add_to_collection('ema/scalar', self.loss)
 
-    def _build_ema(self):
-        self.ema = tf.train.ExponentialMovingAverage(self.config.decay)
-        self.ema_op = self.ema.apply(tf.get_collection("ema/scalar") + tf.get_collection("ema/histogram"))
+    def _get_ema_op(self):
+        ema = tf.train.ExponentialMovingAverage(self.config.decay)
+        ema_op = ema.apply(tf.get_collection("ema/scalar") + tf.get_collection("ema/histogram"))
         for var in tf.get_collection("ema/scalar"):
-            ema_var = self.ema.average(var)
+            ema_var = ema.average(var)
             tf.scalar_summary(ema_var.op.name, ema_var)
         for var in tf.get_collection("ema/histogram"):
-            ema_var = self.ema.average(var)
+            ema_var = ema.average(var)
             tf.histogram_summary(ema_var.op.name, ema_var)
+        return ema_op
 
     def get_loss(self):
         return self.loss
