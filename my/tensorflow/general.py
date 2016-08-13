@@ -103,3 +103,17 @@ def exp_mask(val, mask, name=None):
     if name is None:
         name = "exp_mask"
     return tf.add(val, (1 - tf.cast(mask, 'float')) * VERY_NEGATIVE_NUMBER, name=name)
+
+
+def flatten(tensor, keep):
+    assert keep >= 1
+    flat = tf.reshape(tensor, [-1] + tensor.get_shape().as_list()[-keep:])
+    return flat
+
+
+def reconstruct(tensor, ref, keep):
+    pre_shape = [tf.shape(ref)[i] for i in range(len(ref.get_shape().as_list()[:-keep]))]
+    keep_shape = tensor.get_shape().as_list()[-keep:]
+    target_shape = pre_shape + keep_shape
+    out = tf.reshape(tensor, target_shape)
+    return out
